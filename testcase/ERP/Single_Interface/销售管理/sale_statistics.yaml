@@ -1,0 +1,11 @@
+- baseInfo:
+    api_name: 采购销售统计
+    url: /depotHead/getBuyAndSaleStatistics
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 查询采购销售统计数据
+      validation:
+        - contains: { 'code': 200 }

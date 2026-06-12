@@ -1,0 +1,16 @@
+- baseInfo:
+    api_name: 商品库存查询
+    url: /material/getListWithStock
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 查询商品库存列表
+      params:
+        currentPage: 1
+        pageSize: 10
+        materialParam: ""
+        zeroStock: 0
+      validation:
+        - contains: { 'code': 200 }

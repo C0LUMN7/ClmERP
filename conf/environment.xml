@@ -1,0 +1,22 @@
+<environment>
+    <parameter>
+        <key>system</key>
+        <value>Windows 11</value>
+    </parameter>
+    <parameter>
+        <key>python version</key>
+        <value>3.9.20</value>
+    </parameter>
+    <parameter>
+        <key>BaseUrl</key>
+        <value>your_base_url</value>
+    </parameter>
+    <parameter>
+        <key>environment</key>
+        <value>测试环境</value>
+    </parameter>
+    <parameter>
+        <key>Project</key>
+        <value>your_project_name接口自动化测试框架</value>
+    </parameter>
+</environment>

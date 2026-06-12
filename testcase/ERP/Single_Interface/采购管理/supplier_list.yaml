@@ -1,0 +1,13 @@
+- baseInfo:
+    api_name: 供应商列表查询
+    url: /supplier/list
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 查询供应商列表
+      params:
+        search: ""
+      validation:
+        - contains: { 'code': 200 }

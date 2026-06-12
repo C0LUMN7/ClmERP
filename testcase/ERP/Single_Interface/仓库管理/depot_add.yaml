@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: 新增仓库
+    url: /depot/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增仓库
+      json:
+        name: 测试仓库
+        address: 测试地址
+        remark: 测试用仓库
+      validation:
+        - contains: { 'code': 200 }

@@ -1,0 +1,75 @@
+- baseInfo:
+    api_name: 新增供应商
+    url: /supplier/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增供应商-采购入库业务场景
+      json:
+        supplier: 业务场景测试供应商
+        type: 供应商
+        phonenum: "13800000999"
+        email: biztest@erp.com
+      validation:
+        - contains: { 'code': 200 }
+- baseInfo:
+    api_name: 新增商品类别
+    url: /materialCategory/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增商品类别-采购入库业务场景
+      json:
+        name: 业务场景测试商品类别
+        parentId: 0
+      validation:
+        - contains: { 'code': 200 }
+- baseInfo:
+    api_name: 新增商品
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增商品-采购入库业务场景
+      json:
+        name: 业务场景测试商品
+        categoryId: 1
+        unit: 个
+        model: 场景测试型号
+      validation:
+        - contains: { 'code': 200 }
+- baseInfo:
+    api_name: 新增仓库
+    url: /depot/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增仓库-采购入库业务场景
+      json:
+        name: 业务场景测试仓库
+      validation:
+        - contains: { 'code': 200 }
+- baseInfo:
+    api_name: 商品库存查询
+    url: /material/getListWithStock
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 采购入库后库存查询-业务场景
+      params:
+        currentPage: 1
+        pageSize: 10
+        materialParam: 业务场景测试商品
+        zeroStock: 0
+      validation:
+        - contains: { 'code': 200 }

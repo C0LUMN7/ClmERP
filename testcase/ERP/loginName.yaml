@@ -1,0 +1,17 @@
+- baseInfo:
+    api_name: 用户登录
+    url: /user/login
+    method: post
+    header:
+      Content-Type: application/json;charset=UTF-8
+  testCase:
+    - case_name: 用户名和密码正确登录验证
+      json:
+        loginName: jsh
+        password: ${md5_encryption(123456)}
+        code: ${get_captcha_code()}
+        uuid: ${get_captcha_uuid()}
+      validation:
+        - contains: { 'msgTip': 'user can login' }
+      extract:
+        token: $.data.token

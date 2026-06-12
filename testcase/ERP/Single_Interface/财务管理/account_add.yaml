@@ -1,0 +1,16 @@
+- baseInfo:
+    api_name: 新增结算账户
+    url: /account/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增结算账户
+      json:
+        name: 测试结算账户
+        serialNo: "6222021234567890"
+        initialAmount: 10000
+        remark: 测试用结算账户
+      validation:
+        - contains: { 'code': 200 }

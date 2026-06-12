@@ -1,0 +1,18 @@
+- baseInfo:
+    api_name: 新增商品
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增商品
+      json:
+        name: 测试商品
+        categoryId: 1
+        unit: 个
+        model: 标准型号
+        color: 白色
+        remark: 测试用商品
+      validation:
+        - contains: { 'code': 200 }

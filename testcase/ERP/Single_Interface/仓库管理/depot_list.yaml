@@ -1,0 +1,11 @@
+- baseInfo:
+    api_name: 仓库列表
+    url: /depot/getAllList
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 获取所有仓库列表
+      validation:
+        - contains: { 'code': 200 }
