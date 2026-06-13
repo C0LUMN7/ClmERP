@@ -1,18 +1,17 @@
 - baseInfo:
-    api_name: 新增商品
+    api_name: 创建商品条码
     url: /material/add
     method: POST
     header:
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 正常新增商品
+    - case_name: 创建商品并自动生成条码-供后续采购入库使用
       json:
-        name: 测试商品
+        name: 采购入库商品_${fixed_timestamp()}
         categoryId: 1
-        unit: 个
-        model: 标准型号
-        color: 白色
-        remark: 测试用商品
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "个"
       validation:
         - contains: { 'code': 200 }

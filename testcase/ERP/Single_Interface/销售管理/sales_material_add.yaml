@@ -1,0 +1,17 @@
+- baseInfo:
+    api_name: 创建商品条码（销售出库用）
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建商品并自动生成条码-供销售出库使用
+      json:
+        name: 销售出库商品_${fixed_timestamp()}
+        categoryId: 1
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "个"
+      validation:
+        - contains: { 'code': 200 }

@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: 审核/反审核采购入库单
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 审核入库单（状态置为1）
+      json:
+        ids: ${get_extract_data(depotHeadId)}
+        status: "1"
+      validation:
+        - contains: { 'code': 200 }
+

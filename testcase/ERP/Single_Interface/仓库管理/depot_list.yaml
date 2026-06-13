@@ -7,5 +7,7 @@
       X-Access-Token: ${get_extract_data(token)}
   testCase:
     - case_name: 获取所有仓库列表
+      extract:
+        depotId: $.data[0].id
       validation:
         - contains: { 'code': 200 }

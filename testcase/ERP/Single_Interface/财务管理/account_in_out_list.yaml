@@ -1,13 +1,16 @@
 - baseInfo:
-    api_name: 供应商列表查询
-    url: /supplier/list
+    api_name: 账户流水查询
+    url: /account/findAccountInOutList
     method: GET
     header:
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 查询供应商列表
+    - case_name: 查询指定账户流水
       params:
-        search: ""
+        currentPage: 1
+        pageSize: 10
+        accountId: 1
+        initialAmount: 0
       validation:
         - contains: { 'code': 200 }

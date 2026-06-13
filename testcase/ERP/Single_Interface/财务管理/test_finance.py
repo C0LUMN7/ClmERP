@@ -22,3 +22,17 @@ class TestFinance:
     def test_account_head_add(self, base_info, testcase):
         allure.dynamic.title(testcase['case_name'])
         RequestBase().specification_yaml(base_info, testcase)
+
+    @allure.story(next(c_id) + "账户流水查询")
+    @pytest.mark.run(order=3)
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/财务管理/account_in_out_list.yaml"))
+    def test_account_in_out_list(self, base_info, testcase):
+        allure.dynamic.title(testcase['case_name'])
+        RequestBase().specification_yaml(base_info, testcase)
+
+    @allure.story(next(c_id) + "账户带余额报表")
+    @pytest.mark.run(order=4)
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/财务管理/account_list_with_balance.yaml"))
+    def test_account_list_with_balance(self, base_info, testcase):
+        allure.dynamic.title(testcase['case_name'])
+        RequestBase().specification_yaml(base_info, testcase)

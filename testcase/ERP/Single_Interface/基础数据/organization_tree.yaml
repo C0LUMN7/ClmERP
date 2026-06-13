@@ -1,0 +1,10 @@
+- baseInfo:
+    api_name: 机构树查询
+    url: /organization/getAllOrganizationTreeByUser
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 查询当前用户的机构树
+      validation: []

@@ -26,7 +26,7 @@ def system_login():
     for attempt in range(max_retries):
         try:
             if attempt > 0:
-                DebugTalk._captcha_data = {}
+                DebugTalk._captcha_data = None
                 time.sleep(1)
             api_info = get_testcase_yaml('./testcase/ERP/loginName.yaml')
             RequestBase().specification_yaml(api_info[0][0], api_info[0][1])

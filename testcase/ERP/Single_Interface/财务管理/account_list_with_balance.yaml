@@ -1,14 +1,14 @@
 - baseInfo:
-    api_name: 新增商品类别
-    url: /materialCategory/add
-    method: POST
+    api_name: 账户带余额报表
+    url: /account/listWithBalance
+    method: GET
     header:
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 正常新增商品类别
-      json:
-        name: 测试商品类别
-        parentId: 0
+    - case_name: 查询账户余额报表
+      params:
+        name: ""
+        serialNo: ""
       validation:
         - contains: { 'code': 200 }

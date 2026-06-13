@@ -26,3 +26,8 @@ captcha_thresh.jpg
 venv/
 environment.xml/
 .allure/
+/*.png
+/*.txt
+/*.json
+/*.pdf
+extracted_images/

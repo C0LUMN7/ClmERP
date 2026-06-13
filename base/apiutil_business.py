@@ -57,7 +57,7 @@ class RequestBase(object):
                     extract_data = ','.join(e for e in extract_data)
                 str_data = str_data.replace(ref_all_params, str(extract_data))
         # 还原数据
-        if data and isinstance(data, dict):
+        if isinstance(data, dict):
             data = json.loads(str_data)
             self.handler_yaml_list(data)
         else:
@@ -95,7 +95,7 @@ class RequestBase(object):
                 val = self.replace_load(tc.get('validation'))
                 tc['validation'] = val
                 # 字符串形式的列表转换为list类型
-                validation = eval(tc.pop('validation'))
+                validation = json.loads(tc.pop('validation'))
                 allure_validation = str([str(list(i.values())) for i in validation])
                 allure.attach(allure_validation, "预期结果", allure.attachment_type.TEXT)
                 extract = tc.pop('extract', None)

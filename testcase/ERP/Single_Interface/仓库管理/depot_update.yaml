@@ -1,0 +1,16 @@
+- baseInfo:
+    api_name: 更新仓库
+    url: /depot/update
+    method: PUT
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 更新仓库名称和地址
+      json:
+        id: ${get_extract_data(depotId)}
+        name: 更新后仓库_${fixed_timestamp()}
+        address: 更新后地址
+        remark: 已更新
+      validation:
+        - contains: { 'code': 200 }

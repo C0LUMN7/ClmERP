@@ -226,3 +226,34 @@ class DebugTalk:
         conf = OperationConfig()
         url = conf.get_section_for_data('api_envi', host)
         return url
+
+    _fixed_ts = None
+
+    def fixed_timestamp(self):
+        """获取缓存的13位时间戳，在同一测试会话中始终返回相同值"""
+        if DebugTalk._fixed_ts is None:
+            DebugTalk._fixed_ts = str(int(time.time() * 1000))
+        return DebugTalk._fixed_ts
+
+    def gen_bar_code(self):
+        """生成唯一条码并保存到 extract.yaml，供后续 depotHead 使用"""
+        import requests as req
+        import yaml
+        from conf.operationConfig import OperationConfig
+        from conf.setting import FILE_PATH
+        conf = OperationConfig()
+        host = conf.get_section_for_data('api_envi', 'host')
+        token = self.read.get_extract_yaml('token')
+        headers = {"X-Access-Token": token, "Content-Type": "application/json;charset=UTF-8"}
+        r = req.get(host + '/material/getMaxBarCode', headers=headers)
+        max_bc = r.json()['data']['barCode']
+        bc = str(int(max_bc) + 1)
+        fp = FILE_PATH['EXTRACT']
+        existing = {}
+        if os.path.exists(fp):
+            with open(fp, 'r', encoding='utf-8') as f:
+                existing = yaml.safe_load(f) or {}
+        existing['barCode'] = bc
+        with open(fp, 'w', encoding='utf-8') as f:
+            yaml.dump(existing, f, allow_unicode=True, sort_keys=False)
+        return bc

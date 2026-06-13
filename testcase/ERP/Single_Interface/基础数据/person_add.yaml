@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 新增经手人
+    url: /person/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增经手人
+      json:
+        name: 测试经手人${fixed_timestamp()}
+        type: 销售员
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }

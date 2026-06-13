@@ -8,8 +8,10 @@
   testCase:
     - case_name: 正常新增仓库
       json:
-        name: 测试仓库
+        name: 测试仓库_${fixed_timestamp()}
         address: 测试地址
         remark: 测试用仓库
+      extract:
+        depotId: $.data.id
       validation:
         - contains: { 'code': 200 }

@@ -8,7 +8,8 @@
   testCase:
     - case_name: 新增单据
       json:
-        info: '{"billNo":"B${timestamp()}","type":"收入","billTime":"2026-06-10","accountId":0,"settleAccountIdList":"[]","accountMoneyList":"[]","remark":"测试单据_${timestamp()}","discount":0,"discountLastMoney":0,"otherMoney":0,"changeAmount":0}'
+        info: '{"billNo":"B${fixed_timestamp()}","type":"收入","billTime":"2026-06-10","accountId":0,"settleAccountIdList":"[]","accountMoneyList":"[]","remark":"测试单据_${timestamp()}","discount":0,"discountLastMoney":0,"otherMoney":0,"changeAmount":0}'
         rows: '[{"accountId":1,"accountName":"测试结算账户","eachAmount":50,"remark":"测试"}]'
       validation:
         - contains: { 'code': 200 }
+

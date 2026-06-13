@@ -46,7 +46,7 @@ class RequestBase:
                 # print('通过解析后替换的数据：', str_data)
 
         # 还原数据
-        if data and isinstance(data, dict):
+        if isinstance(data, dict):
             data = json.loads(str_data)
         else:
             data = str_data
@@ -79,7 +79,7 @@ class RequestBase:
             # 处理断言
             val = self.replace_load(test_case.get('validation'))
             test_case['validation'] = val
-            validation = eval(test_case.pop('validation'))
+            validation = json.loads(test_case.pop('validation'))
             # 处理参数提取
             extract = test_case.pop('extract', None)
             extract_list = test_case.pop('extract_list', None)
