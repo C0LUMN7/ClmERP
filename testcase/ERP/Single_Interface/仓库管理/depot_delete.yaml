@@ -1,14 +1,13 @@
 - baseInfo:
-    api_name: 更新仓库
-    url: /depot/update
-    method: PUT
+    api_name: 删除仓库
+    url: /depot/delete
+    method: DELETE
     header:
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 更新仓库名称
-      json:
+    - case_name: 删除仓库（自动化测试专属仓库2）
+      params:
         id: ${get_extract_data(depotId)}
-        name: 自动化测试专属仓库2
       validation:
         - contains: { 'code': 200, 'message': '成功' }
