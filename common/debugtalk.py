@@ -55,28 +55,30 @@ class DebugTalk:
             import io
             import json
             import urllib.request
+            import warnings
             import ddddocr
             from PIL import Image, ImageOps, ImageFilter
-            ocr = ddddocr.DdddOcr(beta=False)
-            for attempt in range(5):
-                req = urllib.request.Request(self._get_host() + '/user/randomImage')
-                resp = urllib.request.urlopen(req)
-                data = json.loads(resp.read())
-                b64 = data['data']['base64'].split(',')[1]
-                uuid = data['data']['uuid']
-                img_bytes = base64.b64decode(b64)
-                # Preprocess: grayscale -> autocontrast -> sharpen -> threshold
-                pil = Image.open(io.BytesIO(img_bytes)).convert('L')
-                pil = ImageOps.autocontrast(pil, cutoff=5)
-                pil = pil.filter(ImageFilter.SHARPEN)
-                pil = pil.point(lambda x: 0 if x < 128 else 255, '1')
-                buf = io.BytesIO()
-                pil.save(buf, format='PNG')
-                processed = buf.getvalue()
-                code = ocr.classification(processed)
-                if len(code) == 4:
-                    DebugTalk._captcha_data = {'uuid': uuid, 'code': code}
-                    break
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                ocr = ddddocr.DdddOcr(beta=False)
+                for attempt in range(5):
+                    req = urllib.request.Request(self._get_host() + '/user/randomImage')
+                    resp = urllib.request.urlopen(req)
+                    data = json.loads(resp.read())
+                    b64 = data['data']['base64'].split(',')[1]
+                    uuid = data['data']['uuid']
+                    img_bytes = base64.b64decode(b64)
+                    pil = Image.open(io.BytesIO(img_bytes)).convert('L')
+                    pil = ImageOps.autocontrast(pil, cutoff=5)
+                    pil = pil.filter(ImageFilter.SHARPEN)
+                    pil = pil.point(lambda x: 0 if x < 128 else 255, '1')
+                    buf = io.BytesIO()
+                    pil.save(buf, format='PNG')
+                    processed = buf.getvalue()
+                    code = ocr.classification(processed)
+                    if len(code) == 4:
+                        DebugTalk._captcha_data = {'uuid': uuid, 'code': code}
+                        break
         return DebugTalk._captcha_data
 
     def get_captcha_code(self):

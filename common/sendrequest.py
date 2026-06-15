@@ -93,6 +93,35 @@ class SendRequest:
         response_dict['res_second'] = res_second
         return response_dict
 
+    def _relogin(self):
+        """重新登录获取新token"""
+        from conf.operationConfig import OperationConfig
+        from common.debugtalk import DebugTalk
+        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        dt = DebugTalk()
+        for attempt in range(5):
+            DebugTalk._captcha_data = None
+            time.sleep(1)
+            try:
+                payload = {
+                    'loginName': 'jsh',
+                    'password': dt.md5_encryption('123456'),
+                    'code': dt.get_captcha_code(),
+                    'uuid': dt.get_captcha_uuid()
+                }
+                headers = {'Content-Type': 'application/json;charset=UTF-8'}
+                r = requests.post(host + '/user/login', json=payload, headers=headers, verify=False, timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    new_token = data.get('data', {}).get('token')
+                    if new_token:
+                        self.read.write_yaml_data({'token': new_token})
+                        logs.info(f'[send_request] 重新登录成功，新token: {new_token}')
+                        return new_token
+            except Exception as e:
+                logs.warning(f'[send_request] 登录异常 (第{attempt+1}次): {e}')
+        return None
+
     def send_request(self, **kwargs):
 
         session = requests.session()
@@ -106,6 +135,17 @@ class SendRequest:
                 self.read.write_yaml_data(cookie)
                 logs.info("cookie：%s" % cookie)
             logs.info("接口返回信息：%s" % result.text if result.text else result)
+
+            # 自动重新登录：检测到loginOut时重新登录并重试
+            if result and result.text and result.text.strip() == 'loginOut':
+                logs.warning('[send_request] 检测到loginOut，正在重新登录并重试...')
+                new_token = self._relogin()
+                if new_token:
+                    if 'headers' in kwargs:
+                        kwargs['headers']['X-Access-Token'] = new_token
+                    result = session.request(**kwargs)
+                    logs.info("接口返回信息(重试)：%s" % result.text if result.text else result)
+
         except requests.exceptions.ConnectionError:
             logs.error("ConnectionError--连接异常")
             pytest.fail("接口请求异常，可能是request的连接数过多或请求速度过快导致程序报错！")

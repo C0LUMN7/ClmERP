@@ -1,5 +1,5 @@
 - baseInfo:
-    api_name: 根据编号查询采购入库单
+    api_name: 根据单据编号查询采购入库单
     url: /depotHead/getDetailByNumber
     method: GET
     header:
@@ -10,6 +10,6 @@
       params:
         number: PO_${fixed_timestamp()}
       extract:
-        depotHeadId: $.data.id
+        buyId: $.data.id
       validation:
-        - contains: { 'code': 200 }
+        - contains: { 'code': 200 ,'type': '入库' }

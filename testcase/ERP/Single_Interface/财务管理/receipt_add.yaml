@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 新增收款单（销售收款）
+    url: /accountHead/addAccountHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 对销售欠款单新增收款单
+      json:
+        info: '{"organId":${get_extract_data(salesOrganId)},"billTime":"${end_time()}","billNo":"SK_${fixed_timestamp()}","accountId":${get_extract_data(salesAccountId)},"totalPrice":${get_extract_data(salesNeedDebt)},"discountMoney":0,"changeAmount":${get_extract_data(salesNeedDebt)},"type":"收款","status":"0"}'
+        rows: '[{"id":"${get_extract_data(salesDebtId)}","billNumber":"${get_extract_data(salesBillNumber)}","needDebt":"${get_extract_data(salesNeedDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(salesNeedDebt)}","remark":""}]'
+      validation:
+        - contains: { 'code': 200 , 'msg': '操作成功'}

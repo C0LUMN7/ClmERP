@@ -1,0 +1,15 @@
+- baseInfo:
+    api_name: 新增采购入库单
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增入库单
+      json:
+        info: '{"number":"PO_${fixed_timestamp()}","type":"入库","subType":"采购","organId":196,"accountId":86,"totalPrice":-299,"changeAmount":0,"debt":299,"discount":0,"discountMoney":0,"discountLastMoney":299,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"电动牙刷","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":299,"allPrice":299,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":299}]'
+      validation:
+        - contains: { 'code': 200 }
+        - eq: { 'msg': '操作成功' }

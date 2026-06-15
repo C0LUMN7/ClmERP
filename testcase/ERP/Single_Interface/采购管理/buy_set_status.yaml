@@ -1,5 +1,5 @@
 - baseInfo:
-    api_name: 审核/反审核采购入库单
+    api_name: 审核采购入库单
     url: /depotHead/batchSetStatus
     method: POST
     header:
@@ -8,8 +8,8 @@
   testCase:
     - case_name: 审核入库单（状态置为1）
       json:
-        ids: ${get_extract_data(depotHeadId)}
+        ids: ${get_extract_data(buyId)}
         status: "1"
       validation:
-        - contains: { 'code': 200 }
+        - contains: { 'code': 200 ,'message': '成功' }
 

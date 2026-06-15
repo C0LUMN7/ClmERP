@@ -11,6 +11,7 @@ Pillow
 pymongo
 PyMySQL
 pytest
+pytest-ordering
 PyYAML
 redis
 requests

@@ -1,9 +1,11 @@
 import json
 import re
+import time
 from json.decoder import JSONDecodeError
 
 import allure
 import jsonpath
+import requests as req
 
 from common.assertions import Assertions
 from common.debugtalk import DebugTalk
@@ -21,6 +23,38 @@ class RequestBase:
         self.conf = OperationConfig()
         self.read = ReadYamlData()
         self.asserts = Assertions()
+
+    def _relogin(self):
+        """重新登录获取新token，写入extract.yaml (最多重试5次)"""
+        host = self.conf.get_section_for_data('api_envi', 'host')
+        dt = DebugTalk()
+        max_retries = 5
+        for attempt in range(max_retries):
+            DebugTalk._captcha_data = None
+            time.sleep(1)
+            try:
+                payload = {
+                    'loginName': 'jsh',
+                    'password': dt.md5_encryption('123456'),
+                    'code': dt.get_captcha_code(),
+                    'uuid': dt.get_captcha_uuid()
+                }
+                headers = {'Content-Type': 'application/json;charset=UTF-8'}
+                r = req.post(host + '/user/login', json=payload, headers=headers, verify=False, timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    new_token = data.get('data', {}).get('token')
+                    if new_token:
+                        self.read.write_yaml_data({'token': new_token})
+                        logs.info(f'重新登录成功，新token: {new_token} (第{attempt+1}次)')
+                        return new_token
+                    logs.warning(f'登录返回无token (第{attempt+1}次): {data}')
+                else:
+                    logs.warning(f'登录状态码异常 (第{attempt+1}次): {r.status_code}')
+            except Exception as e:
+                logs.warning(f'登录异常 (第{attempt+1}次): {e}')
+        logs.error(f'重新登录失败，已重试{max_retries}次')
+        return None
 
     def replace_load(self, data):
         """yaml数据替换解析"""
@@ -98,19 +132,43 @@ class RequestBase:
             res = self.run.run_main(name=api_name, url=url, case_name=case_name, header=header, method=method,
                                     file=files, cookies=cookie, **test_case)
             status_code = res.status_code
-            allure.attach(self.allure_attach_response(res.json()), '接口响应信息', allure.attachment_type.TEXT)
 
             try:
                 res_json = json.loads(res.text)  # 把json格式转换成字典字典
+                allure.attach(self.allure_attach_response(res_json), '接口响应信息', allure.attachment_type.TEXT)
                 if extract is not None:
                     self.extract_data(extract, res.text)
                 if extract_list is not None:
                     self.extract_data_list(extract_list, res.text)
                 # 处理断言
                 self.asserts.assert_result(validation, res_json, status_code)
-            except JSONDecodeError as js:
-                logs.error('系统异常或接口未请求！')
-                raise js
+            except (JSONDecodeError, ValueError) as js:
+                # 兜底：send_request未捕获到时再处理
+                try:
+                    res_text = res.text if res is not None else ''
+                except Exception:
+                    res_text = ''
+                if 'loginOut' in res_text:
+                    logs.warning(f'【{api_name}】[fallback] 检测到loginOut，正在重新登录并重试...')
+                    new_token = self._relogin()
+                    if new_token:
+                        header['X-Access-Token'] = new_token
+                        res = self.run.run_main(name=api_name, url=url, case_name=case_name, header=header,
+                                                method=method, file=files, cookies=cookie, **test_case)
+                        status_code = res.status_code
+                        res_json = json.loads(res.text)
+                        allure.attach(self.allure_attach_response(res_json), '接口响应信息', allure.attachment_type.TEXT)
+                        if extract is not None:
+                            self.extract_data(extract, res.text)
+                        if extract_list is not None:
+                            self.extract_data_list(extract_list, res.text)
+                        self.asserts.assert_result(validation, res_json, status_code)
+                    else:
+                        logs.error('重新登录失败，无法继续')
+                        raise js
+                else:
+                    logs.error(f'系统异常或接口未请求！响应内容: {res_text[:200]}')
+                    raise js
             except Exception as e:
                 logs.error(e)
                 raise e

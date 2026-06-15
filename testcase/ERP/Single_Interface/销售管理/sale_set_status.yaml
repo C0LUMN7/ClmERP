@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 审核销售出库单
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 审核出库单（状态置为1）
+      json:
+        ids: ${get_extract_data(saleId)}
+        status: "1"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
