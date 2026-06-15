@@ -11,5 +11,9 @@
         number: SO_${fixed_timestamp()}
       extract:
         saleId: $.data.id
+        saleOrganId: $.data.organId
+        saleNumber: $.data.number
+        saleTotalPrice: $.data.totalPrice
+        saleDebt: $.data.debt
       validation:
         - contains: { 'code': 200, 'type': '出库' }

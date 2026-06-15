@@ -11,5 +11,9 @@
         number: PO_${fixed_timestamp()}
       extract:
         buyId: $.data.id
+        buyOrganId: $.data.organId
+        buyNumber: $.data.number
+        buyTotalPrice: $.data.totalPrice
+        buyDebt: $.data.debt
       validation:
         - contains: { 'code': 200 ,'type': '入库' }

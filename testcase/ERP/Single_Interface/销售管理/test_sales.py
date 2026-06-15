@@ -28,3 +28,10 @@ class TestSales:
     def test_sale_set_status(self, base_info, testcase):
         allure.dynamic.title(testcase['case_name'])
         RequestBase().specification_yaml(base_info, testcase)
+
+    @allure.story(next(c_id) + '新增收款单（销售收款）')
+    @pytest.mark.run(order=11)
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/销售管理/receipt_add.yaml"))
+    def test_receipt_add(self, base_info, testcase):
+        allure.dynamic.title(testcase['case_name'])
+        RequestBase().specification_yaml(base_info, testcase)

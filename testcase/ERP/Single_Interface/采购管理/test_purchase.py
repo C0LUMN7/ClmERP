@@ -46,3 +46,10 @@ class TestPurchase:
     def test_depot_head_batch_set_status(self, base_info, testcase):
         allure.dynamic.title(testcase['case_name'])
         RequestBase().specification_yaml(base_info, testcase)
+
+    @allure.story(next(c_id) + '新增付款单（采购付款）')
+    @pytest.mark.run(order=8)
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/采购管理/payment_add.yaml"))
+    def test_payment_add(self, base_info, testcase):
+        allure.dynamic.title(testcase['case_name'])
+        RequestBase().specification_yaml(base_info, testcase)

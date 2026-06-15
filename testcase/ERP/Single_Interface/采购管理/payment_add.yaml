@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 新增付款单（采购付款）
+    url: /accountHead/addAccountHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 对采购入库单新增付款单
+      json:
+        info: '{"organId":${get_extract_data(buyOrganId)},"billTime":"${end_time()}","billNo":"FK_${fixed_timestamp()}","accountId":105,"totalPrice":-${get_extract_data(buyDebt)},"discountMoney":0,"changeAmount":-${get_extract_data(buyDebt)},"type":"付款","status":"0"}'
+        rows: '[{"id":"${get_extract_data(buyId)}","billNumber":"${get_extract_data(buyNumber)}","needDebt":"${get_extract_data(buyDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(buyDebt)}","remark":""}]'
+      validation:
+        - contains: { 'code': 200 , 'msg': '操作成功'}
