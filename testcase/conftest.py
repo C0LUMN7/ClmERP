@@ -52,7 +52,8 @@ def datadb_init():
         cursor = conn.cursor
         bill_prefixes = ("PO_", "SO_", "FK_", "SK_", "BS_")
         for p in bill_prefixes:
-            cursor.execute(f"DELETE FROM jsh_account_item WHERE account_id IN (SELECT id FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_account_item WHERE bill_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_account_item WHERE header_id IN (SELECT id FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_depot_item WHERE header_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0'")
             cursor.execute(f"DELETE FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0'")

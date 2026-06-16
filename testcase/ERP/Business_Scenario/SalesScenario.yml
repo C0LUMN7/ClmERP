@@ -92,3 +92,4 @@
         rows: '[{"id":"${get_extract_data(saleId)}","billNumber":"${get_extract_data(saleNumber)}","needDebt":"${get_extract_data(saleDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(saleDebt)}","remark":""}]'
       validation:
         - contains: { 'code': 200, 'msg': '操作成功' }
+        - db: "SELECT id FROM jsh_account_item WHERE bill_id = ${get_extract_data(saleId)} AND need_debt - each_amount = 0"
