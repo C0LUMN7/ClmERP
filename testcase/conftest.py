@@ -5,6 +5,7 @@ from common.readyaml import get_testcase_yaml
 from base.apiutil import RequestBase
 from common.recordlog import logs
 from common.debugtalk import DebugTalk
+from common.connection import ConnectMysql
 
 """
 -fixture scope: function, class, module, session
@@ -45,10 +46,24 @@ def datadb_init():
     数据库可以预先预置一批本次测试的数据，在测试完成之后将这批数据清理，就不会对系统造成影响，也不会产生脏数据
     :return:
     """
-    # conn = ConnectMysql()
-    # yield
-    # sql = "delete from sys_user where login_name='test999'"
-    # conn.delete(sql)
-    # allure.attach('将测试数据清空', 'fixture后置', allure.attachment_type.TEXT)
-
-    pass
+    yield
+    conn = ConnectMysql()
+    try:
+        cursor = conn.cursor
+        bill_prefixes = ("PO_", "SO_", "FK_", "SK_", "BS_")
+        for p in bill_prefixes:
+            cursor.execute(f"DELETE FROM jsh_account_item WHERE account_id IN (SELECT id FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_depot_item WHERE header_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0'")
+            cursor.execute(f"DELETE FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0'")
+        material_prefixes = ("电动牙刷_", "洗面奶_")
+        for p in material_prefixes:
+            cursor.execute(f"DELETE FROM jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_material_extend WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")
+            cursor.execute(f"DELETE FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0'")
+        conn.conn.commit()
+        logs.info("后置数据清理完成")
+    except Exception as e:
+        logs.warning(f"后置数据清理异常: {e}")
+    finally:
+        conn.close()

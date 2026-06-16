@@ -154,7 +154,7 @@ class Assertions:
         flag = 0
         conn = ConnectMysql()
         db_value = conn.query_all(expected_results)
-        if db_value is not None:
+        if db_value:
             logs.info("数据库断言成功")
         else:
             flag += 1

@@ -8,7 +8,7 @@
   testCase:
     - case_name: 正常新增商品（带库存和价格）
       json:
-        name: 电动牙刷
+        name: 电动牙刷_${fixed_timestamp()}
         brand: 笑容加
         mnemonic: ddys
         categoryId: 91
@@ -29,4 +29,4 @@
       validation:
         - contains: { 'message': '成功' }
         - eq: { 'code': 200 }
-        - db: "SELECT id FROM jsh_material WHERE name = '电动牙刷' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"
+        - db: "SELECT id FROM jsh_material WHERE name = '电动牙刷_${fixed_timestamp()}' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"

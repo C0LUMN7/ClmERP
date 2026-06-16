@@ -8,7 +8,7 @@
   testCase:
     - case_name: 创建商品-销售业务场景
       json:
-        name: 洗面奶
+        name: 洗面奶_${fixed_timestamp()}
         brand: 欧莱雅
         mnemonic: xmn
         categoryId: 91
@@ -39,7 +39,7 @@
     - case_name: 新增出库单-销售业务场景
       json:
         info: '{"number":"BS_SO_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
-        rows: '[{"name":"洗面奶","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"瓶","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
+        rows: '[{"name":"洗面奶_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"瓶","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
       validation:
         - contains: { 'code': 200 }
         - eq: { 'msg': '操作成功' }
@@ -76,6 +76,8 @@
         status: "1"
       validation:
         - contains: { 'code': 200, 'message': '成功' }
+        - db: "SELECT id FROM jsh_depot_head WHERE id = ${get_extract_data(saleId)} AND status = '1' AND delete_flag = '0'"
+        - db: "SELECT current_number FROM jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '洗面奶_%' AND delete_flag = '0') AND depot_id = 124 AND current_number = 99"
 - baseInfo:
     api_name: 新增收款单（销售收款）
     url: /accountHead/addAccountHeadAndDetail
