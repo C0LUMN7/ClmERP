@@ -18,6 +18,8 @@ conf = OperationConfig()
 class ConnectMysql:
 
     def __init__(self):
+        self.conn = None
+        self.cursor = None
 
         mysql_conf = {
             'host': conf.get_section_mysql('host'),
@@ -28,8 +30,7 @@ class ConnectMysql:
         }
 
         try:
-            self.conn = pymysql.connect(**mysql_conf, charset='utf8')
-            # cursor=pymysql.cursors.DictCursor,将数据库表字段显示，以key-value形式展示
+            self.conn = pymysql.connect(**mysql_conf, charset='utf8', ssl_disabled=True)
             self.cursor = self.conn.cursor(cursor=pymysql.cursors.DictCursor)
             logs.info("""成功连接到mysql---
             host：{host}
@@ -40,8 +41,9 @@ class ConnectMysql:
             logs.error(f"except:{e}")
 
     def close(self):
-        if self.conn and self.cursor:
+        if self.cursor:
             self.cursor.close()
+        if self.conn:
             self.conn.close()
         return True
 
@@ -51,25 +53,11 @@ class ConnectMysql:
             self.conn.commit()
             res = self.cursor.fetchall()
 
-            keys = ''
             values = []
-            for item in res:
-                keys = list(item.keys())
-
             for ite in res:
                 values.append(list(ite.values()))
 
-            for val in values:
-                # lst_format = [
-                #     keys,
-                #     val
-                # ]
-                lst_format = [
-                    val
-                ]
-
-                return lst_format
-                # return print_table(lst_format)
+            return values
 
         except Exception as e:
             logs.error(e)

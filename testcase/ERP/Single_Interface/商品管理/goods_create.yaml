@@ -29,3 +29,4 @@
       validation:
         - contains: { 'message': '成功' }
         - eq: { 'code': 200 }
+        - db: "SELECT id FROM jsh_material WHERE name = '电动牙刷' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"

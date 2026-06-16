@@ -12,3 +12,4 @@
         rows: '[{"id":"${get_extract_data(buyId)}","billNumber":"${get_extract_data(buyNumber)}","needDebt":"${get_extract_data(buyDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(buyDebt)}","remark":""}]'
       validation:
         - contains: { 'code': 200 , 'msg': '操作成功'}
+        - db: "SELECT id FROM jsh_account_head WHERE bill_no = 'FK_${fixed_timestamp()}' AND total_price = -${get_extract_data(buyDebt)} AND delete_flag = '0'"

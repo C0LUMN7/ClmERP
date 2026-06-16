@@ -12,3 +12,4 @@
         rows: '[{"id":"${get_extract_data(saleId)}","billNumber":"${get_extract_data(saleNumber)}","needDebt":"${get_extract_data(saleDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(saleDebt)}","remark":""}]'
       validation:
         - contains: { 'code': 200 , 'msg': '操作成功'}
+        - db: "SELECT id FROM jsh_account_head WHERE bill_no = 'SK_${fixed_timestamp()}' AND total_price = ${get_extract_data(saleDebt)} AND delete_flag = '0'"

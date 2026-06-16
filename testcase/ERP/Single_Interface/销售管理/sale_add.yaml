@@ -13,3 +13,4 @@
       validation:
         - contains: { 'code': 200 }
         - eq: { 'msg': '操作成功' }
+        - db: "SELECT id FROM jsh_depot_head WHERE number = 'SO_${fixed_timestamp()}' AND type = '出库' AND delete_flag = '0'"

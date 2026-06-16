@@ -12,3 +12,4 @@
         status: "1"
       validation:
         - contains: { 'code': 200, 'message': '成功' }
+        - db: "SELECT id FROM jsh_depot_head WHERE id = ${get_extract_data(saleId)} AND status = '1' AND delete_flag = '0'"

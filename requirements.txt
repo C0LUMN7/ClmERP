@@ -4,7 +4,7 @@ clickhouse_sqlalchemy
 ddddocr
 jsonpath
 numpy<=1.26.4
-onnxruntime
+onnxruntime==1.20.0
 pandas
 paramiko
 Pillow
