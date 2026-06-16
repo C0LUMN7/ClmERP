@@ -1,0 +1,329 @@
+# ERP 接口自动化测试框架
+
+基于 Python + pytest + requests + Allure 实现的接口自动化测试框架，用于对管伊佳 ERP v3.6 系统进行接口级功能验证、业务链路回归和数据校验。
+
+---
+
+## 一、项目简介
+
+本项目是一个面向 Web 系统的接口自动化测试框架，主要针对进销存 ERP 系统的后端接口进行自动化测试。
+
+**项目背景：** 在实习 / 项目实践中，手动回归 ERP 系统的采购、销售、库存等核心业务链路效率低、易遗漏。因此搭建了该接口自动化测试框架，用于日常回归测试和冒烟测试。
+
+**主要解决问题：**
+- 批量执行接口测试用例，代替手工点击页面验证
+- 自动处理登录态（验证码识别 + Token 管理 + 自动续期）
+- 实现接口间的数据依赖传递，串联完整业务链路
+- 自动生成测试报告并通过钉钉 / 邮件通知结果
+
+**适用场景：**
+- 接口回归测试
+- 接口冒烟测试
+- 进销存核心链路稳定性验证
+- 持续集成中的自动化测试环节（可接入 Jenkins）
+
+---
+
+## 二、技术栈
+
+| 技术 / 工具           | 作用                                       |
+| --------------------- | ------------------------------------------ |
+| Python 3.12           | 编程语言                                   |
+| pytest 9.0            | 测试框架                                   |
+| requests              | HTTP 请求库                                |
+| PyYAML                | YAML 数据驱动（测试用例 + 参数提取）        |
+| Allure                | 测试报告生成                               |
+| pytest-ordering       | 测试用例执行顺序控制                        |
+| ddddocr + Pillow      | 验证码自动识别（登录场景）                  |
+| jsonpath              | JSON 响应数据提取                          |
+| logging (RotatingFileHandler) | 日志记录，自动滚动备份                  |
+| PyMySQL               | MySQL 数据库连接与断言                     |
+| redis                 | Redis 连接                                 |
+| clickhouse-sqlalchemy | ClickHouse 连接与查询                      |
+| pymongo               | MongoDB 连接与操作                         |
+| paramiko              | SSH 远程服务器连接                         |
+| 钉钉机器人             | 测试结果即时通知                           |
+| smtplib               | 邮件发送测试报告                           |
+
+---
+
+## 三、项目功能
+
+### 1. 接口请求统一封装
+`common/sendrequest.py` 封装了对 GET / POST / PUT / DELETE 等 HTTP 方法的请求，统一处理超时、SSL 证书验证，并将请求日志和参数写入 Allure 报告。
+
+### 2. YAML 数据驱动测试
+测试用例以 YAML 文件编写，每个用例包含 `baseInfo`（接口地址、方法、请求头）和 `testCase`（具体请求参数、预期结果）。`common/readyaml.py` 负责读取和解析 YAML。
+
+### 3. 动态参数处理
+`common/debugtalk.py` 提供 `md5_encryption()`、`timestamp()`、`fixed_timestamp()`、`gen_bar_code()` 等辅助函数，支持在 YAML 中以 `${函数名()}` 语法动态生成参数。
+
+### 4. 登录鉴权与 Token 自动管理
+- `testcase/conftest.py` 中的 `system_login` fixture 在 session 级别自动执行登录，通过 ddddocr 识别验证码，提取 Token 并写入 `extract.yaml`
+- 当接口返回 `loginOut` 时，`base/apiutil.py` 自动触发重新登录并重试当前请求，最多 5 次
+
+### 5. 多类型断言
+`common/assertions.py` 支持：
+- **contains** — 响应文本包含指定字段值
+- **eq** — 响应字段精确相等
+- **ne** — 响应字段不相等
+- **rv** — 响应任意值断言
+- **db** — 数据库断言（执行 SQL 查询验证数据是否落库）
+
+### 6. 接口数据依赖（提取与传递）
+`extract.yaml` 作为全局变量存储文件。`base/apiutil.py` 支持使用 JSONPath 或正则表达式从接口响应中提取数据，写入 `extract.yaml`，后续用例通过 `${get_extract_data(key)}` 引用。
+
+### 7. 环境配置管理
+`conf/config.ini` 统一管理环境地址、数据库连接、Redis、邮件、钉钉等配置。`conf/config.ini.example` 提供了配置模板，便于新环境快速接入。
+
+### 8. 日志记录
+`common/recordlog.py` 使用 RotatingFileHandler 实现日志自动滚动备份（单个文件 5MB，保留 7 个备份），自动清理 30 天前的过期日志。
+
+### 9. Allure 测试报告
+测试报告包含：接口名称、请求地址、请求方法、请求头、请求参数、响应信息、断言结果。`run.py` 自动生成 Allure 报告并启动本地服务。
+
+### 10. 测试结果通知
+- **钉钉机器人**：`common/dingRobot.py` 通过加签方式发送测试摘要到钉钉群
+- **邮件通知**：`common/semail.py` 发送测试结果邮件（支持附件）
+
+### 11. 数据库校验
+支持 MySQL、ClickHouse、Redis、MongoDB 四种存储系统的数据查询与断言。
+
+---
+
+## 四、项目目录结构
+
+```text
+column-erp-testing/
+├── base/                          # 核心测试框架层
+│   ├── apiutil.py                 #   接口请求处理核心（参数替换、提取、断言、自动重登）
+│   ├── apiutil_business.py        #   业务场景专用请求处理器
+│   ├── generateId.py              #   Allure 模块/用例编号生成器
+│   └── removefile.py              #   测试产物清理工具
+├── common/                        # 公共组件层
+│   ├── assertions.py              #   断言引擎（contains/eq/ne/rv/db）
+│   ├── connection.py              #   数据库连接（MySQL/Redis/ClickHouse/MongoDB/SSH）
+│   ├── debugtalk.py               #   动态数据生成（加密、时间戳、验证码、条码）
+│   ├── dingRobot.py               #   钉钉机器人通知
+│   ├── readyaml.py                #   YAML 读写（测试数据 + 提取变量）
+│   ├── recordlog.py               #   日志记录（滚动备份、自动清理）
+│   ├── semail.py                  #   邮件通知
+│   ├── send_notification.py       #   通知整合工具
+│   └── sendrequest.py             #   HTTP 请求发送（含自动重新登录）
+├── conf/                          # 配置层
+│   ├── config.ini                 #   实际运行配置（不提交到 Git）
+│   ├── config.ini.example         #   配置模板
+│   ├── environment.xml            #   Allure 环境信息
+│   ├── operationConfig.py         #   INI 配置文件解析器
+│   └── setting.py                 #   全局路径与常量定义
+├── conftest.py                    # 根级 pytest 钩子（清理产物、钉钉/邮件通知）
+├── testcase/                      # 测试用例层
+│   ├── conftest.py                #   全局 fixture（自动登录、数据清理）
+│   ├── ERP/
+│   │   ├── loginName.yaml         #   登录接口用例
+│   │   ├── Single_Interface/      #   单接口测试
+│   │   │   ├── 商品管理/           #     商品 CRUD（create → read → update）
+│   │   │   ├── 仓库管理/           #     仓库 CRUD（create → read → update → delete）
+│   │   │   ├── 采购管理/           #     采购入库单（新增 → 查询 → 审核 → 付款）
+│   │   │   └── 销售管理/           #     销售出库单（新增 → 查询 → 审核 → 收款）
+│   │   └── Business_Scenario/     #   业务场景测试
+│   │       ├── PurchaseScenario.yml   #   采购全链路（创建商品 → 采购入库 → 审核 → 付款）
+│   │       ├── SalesScenario.yml      #   销售全链路（创建商品 → 销售出库 → 审核 → 收款）
+│   │       └── test_business_scenario.py
+├── logs/                          # 日志输出目录（自动生成）
+├── report/                        # 测试报告目录（自动生成）
+│   ├── temp/                      #   Allure 临时结果
+│   └── allureReport/              #   Allure 静态报告
+├── extract.yaml                   # 接口关联变量存储（自动生成，不提交）
+├── run.py                         # 测试执行入口
+├── pytest.ini                     # pytest 配置（过滤警告、文件匹配规则）
+└── requirements.txt               # Python 依赖清单
+```
+
+---
+
+## 五、框架设计思路
+
+### 配置层（conf/）
+所有可变配置集中在 `config.ini`：被测环境地址、数据库连接参数、邮件/钉钉凭据、报告类型等。通过 `OperationConfig` 统一读取，实现环境与代码隔离。
+
+### 数据层（YAML + extract.yaml）
+- 测试数据以 YAML 文件管理，与 Python 代码分离
+- `extract.yaml` 作为全局变量池，存储接口间传递的数据（Token、单据 ID、条码等），支持顺序 / 随机读取
+
+### 请求层（common/sendrequest.py + base/apiutil.py）
+`SendRequest` 封装了 `session.request()`，统一处理超时、SSL 验证和 Cookie 存储。`RequestBase.specification_yaml()` 是核心调度方法：解析 YAML → 替换动态参数 → 发送请求 → 提取响应数据 → 执行断言 → 记录 Allure。
+
+### 用例层（testcase/）
+测试用例分为两类：
+- **单接口测试**：针对单个接口的 CRUD 验证，覆盖正常流程
+- **业务场景测试**：串联多个接口，模拟真实业务操作（如采购入库 → 查询 → 审核 → 付款）
+
+### 断言层（common/assertions.py）
+支持五种断言模式，通过 YAML 中 `validation` 字段声明。断言失败时会累积错误 flag，最终统一判定用例结果，并将预期/实际值写入 Allure 报告。
+
+### 报告层（Allure）
+每个接口的执行过程（名称、地址、参数、响应、断言）都以 Allure attachment 形式记录。`run.py` 自动生成 HTML 报告并启动本地服务。
+
+### 工具层（common/）
+包含日志、YAML 读写、数据库连接、加密、通知等公共能力，各模块通过 `from common.xxx import Xxx` 引用。
+
+---
+
+## 六、核心流程
+
+```mermaid
+flowchart TD
+    A[读取 conf/config.ini 配置] --> B[Session 级 fixture: 自动登录]
+    B --> C[OCR 识别验证码 → 获取 Token]
+    C --> D{提取 Token 写入 extract.yaml}
+    D --> E[加载 YAML 测试用例]
+    E --> F[替换动态参数 ${func()} / ${get_extract_data()}]
+    F --> G[发送 HTTP 请求]
+    G --> H[提取响应数据到 extract.yaml]
+    H --> I[执行多重断言]
+    I --> J{断言是否全部通过}
+    J -- 是 --> K[记录成功日志]
+    J -- 否 --> L[记录失败日志 + Allure 附件]
+    K --> M[Allure 生成测试报告]
+    L --> M
+    M --> N[钉钉/邮件通知测试结果]
+```
+
+### 登录流程（自动处理）
+
+```mermaid
+flowchart LR
+    A[调用 /user/randomImage] --> B[ddddocr 识别验证码]
+    B --> C[POST /user/login]
+    C --> D{响应 code == 200?}
+    D -- 是 --> E[提取 Token → extract.yaml]
+    D -- 否 --> A
+    E --> F[后续用例携带 X-Access-Token]
+```
+
+### Token 过期自动处理
+
+```mermaid
+flowchart LR
+    A[发送接口请求] --> B{响应 == loginOut?}
+    B -- 否 --> C[正常解析]
+    B -- 是 --> D[触发 _relogin()]
+    D --> E[重新获取 Token]
+    E --> F[更新 extract.yaml]
+    F --> G[重试当前请求]
+```
+
+---
+
+## 七、快速开始
+
+### 1. 克隆项目
+
+```bash
+git clone <仓库地址>
+cd column-erp-testing
+```
+
+### 2. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+> 注意：`requirements.txt` 中包含了 ddddocr（验证码识别）和 onnxruntime，首次运行会自动下载模型文件。
+
+### 3. 修改配置
+
+```bash
+cp conf/config.ini.example conf/config.ini
+```
+
+编辑 `conf/config.ini`，填写实际的环境地址和数据库连接信息：
+
+```ini
+[api_envi]
+host = http://你的服务器地址/jshERP-boot
+
+[MYSQL]
+host = 你的MySQL地址
+port = 3306
+username = 数据库用户名
+password = 数据库密码
+database = jsh_erp
+```
+
+### 4. 执行测试
+
+```bash
+# 方式一：使用 run.py（推荐）
+python run.py
+
+# 方式二：直接使用 pytest
+pytest -s -v --alluredir=./report/temp ./testcase/ERP/ --clean-alluredir
+```
+
+### 5. 查看报告
+
+Allure 报告生成在 `./report/allureReport/` 目录，可直接用浏览器打开 `index.html`，或执行以下命令自动打开：
+
+```bash
+allure open ./report/allureReport
+```
+
+如使用 `python run.py` 执行，报告会自动生成并打开。
+
+---
+
+## 八、测试报告展示
+
+本项目使用 Allure 生成测试报告，包含以下内容：
+
+- **概览页**：测试通过率、执行时长、环境信息
+- **功能模块分类**：按 `@allure.feature` 划分（商品管理、仓库管理、采购管理、销售管理、业务场景）
+- **用例详情**：每个用例记录接口名称、地址、方法、请求头、请求参数、响应信息、断言结果
+- **失败定位**：失败的断言会显示预期值与实际值的对比
+
+> 测试报告截图可在后续补充。
+
+> 如需邮件发送报告，直接运行 `pytest` 即可，框架会自动调用 `BuildEmail` 发送结果摘要到配置的邮箱。
+
+---
+
+## 九、项目亮点
+
+### 1. 分层清晰的框架设计
+框架分为配置层、数据层、请求层、用例层、断言层、报告层、工具层，各层职责单一、通过 import 组合，便于维护和扩展。
+
+### 2. 自动化登录 Token 管理
+集成 ddddocr 实现验证码自动识别，测试 session 自动完成登录。当 Token 过期时自动检测（`loginOut` 响应）并重新获取，保证长时测试稳定性。
+
+### 3. YAML 驱动的数据与代码分离
+测试数据与 Python 代码完全分离，新增接口用例只需编写 YAML 文件，无需修改框架代码。参数支持 `${函数名()}` 动态生成，灵活性强。
+
+### 4. 多类型断言体系
+支持字符串包含、精确相等、不相等、任意值、数据库 SQL 五种断言模式，测试人员可以根据场景灵活选择或组合使用。
+
+### 5. 接口数据依赖自动传递
+通过 `extract.yaml` 实现接口间的数据关联：一个接口的响应字段（如单据 ID、条码）可自动提取并传递给后续接口使用，完成业务链路的串联。
+
+### 6. 多种数据源支持
+框架内置 MySQL、Redis、ClickHouse、MongoDB 四种数据库的客户端封装，以及 SSH 远程连接能力，可用于接口测试前后的数据准备和结果校验。
+
+### 7. 多渠道测试结果通知
+测试执行完成后自动发送钉钉机器人消息和邮件，包含测试总数、通过数、失败数、通过率等摘要信息，方便团队及时了解测试结果。
+
+### 8. 自动重试与异常处理
+登录接口支持 5 次重试（验证码识别失败时自动重试），Token 过期后自动重新登录并重试请求，提升测试稳定性。
+
+---
+
+## 十、后续优化方向
+
+1. **接入持续集成** — 配置 Jenkins / GitHub Actions，实现代码提交后自动触发接口测试并归档报告
+2. **增加异常场景测试** — 目前以正常流程为主，后续补充参数缺失、参数非法、鉴权异常、并发请求等异常场景覆盖
+3. **测试数据自动准备与清理** — 目前 `datadb_init` fixture 中数据清理代码为占位状态，后续完善数据库层面的前置数据写入和后置清理机制
+4. **增加 Mock 测试** — 当被测接口依赖第三方系统或环境不稳定时，引入 Mock 机制隔离外部依赖
+5. **支持更多请求协议** — 当前只支持 HTTP/HTTPS 接口，后续可扩展 Dubbo、gRPC 等协议的测试能力
+6. **失败用例自动重跑** — 增加 pytest-rerunfailures 插件，对偶发失败的用例进行自动重试，减少误报
+7. **测试数据参数化文件** — 当前 YAML 中直接写死了部分测试数据，后续可改为从 CSV 或 Excel 文件读取，便于测试人员维护数据
