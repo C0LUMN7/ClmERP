@@ -38,10 +38,6 @@
 | jsonpath              | JSON 响应数据提取                          |
 | logging (RotatingFileHandler) | 日志记录，自动滚动备份                  |
 | PyMySQL               | MySQL 数据库连接与断言                     |
-| redis                 | Redis 连接                                 |
-| clickhouse-sqlalchemy | ClickHouse 连接与查询                      |
-| pymongo               | MongoDB 连接与操作                         |
-| paramiko              | SSH 远程服务器连接                         |
 | 钉钉机器人             | 测试结果即时通知                           |
 | smtplib               | 邮件发送测试报告                           |
 
@@ -74,7 +70,7 @@
 `extract.yaml` 作为全局变量存储文件。`base/apiutil.py` 支持使用 JSONPath 或正则表达式从接口响应中提取数据，写入 `extract.yaml`，后续用例通过 `${get_extract_data(key)}` 引用。
 
 ### 7. 环境配置管理
-`conf/config.ini` 统一管理环境地址、数据库连接、Redis、邮件、钉钉等配置。`conf/config.ini.example` 提供了配置模板，便于新环境快速接入。
+`conf/config.ini` 统一管理环境地址、数据库连接、邮件、钉钉等配置。`conf/config.ini.example` 提供了配置模板，便于新环境快速接入。
 
 ### 8. 日志记录
 `common/recordlog.py` 使用 RotatingFileHandler 实现日志自动滚动备份（单个文件 5MB，保留 7 个备份），自动清理 30 天前的过期日志。
@@ -87,7 +83,7 @@
 - **邮件通知**：`common/semail.py` 发送测试结果邮件（支持附件）
 
 ### 11. 数据库校验
-支持 MySQL、ClickHouse、Redis、MongoDB 四种存储系统的数据查询与断言。
+支持 MySQL 数据库的数据查询与断言，可用于接口测试前后验证数据落库情况。
 
 ---
 
@@ -102,7 +98,7 @@ column-erp-testing/
 │   └── removefile.py              #   测试产物清理工具
 ├── common/                        # 公共组件层
 │   ├── assertions.py              #   断言引擎（contains/eq/ne/rv/db）
-│   ├── connection.py              #   数据库连接（MySQL/Redis/ClickHouse/MongoDB/SSH）
+│   ├── connection.py              #   数据库连接（MySQL）
 │   ├── debugtalk.py               #   动态数据生成（加密、时间戳、验证码、条码）
 │   ├── dingRobot.py               #   钉钉机器人通知
 │   ├── readyaml.py                #   YAML 读写（测试数据 + 提取变量）
@@ -307,8 +303,8 @@ allure open ./report/allureReport
 ### 5. 接口数据依赖自动传递
 通过 `extract.yaml` 实现接口间的数据关联：一个接口的响应字段（如单据 ID、条码）可自动提取并传递给后续接口使用，完成业务链路的串联。
 
-### 6. 多种数据源支持
-框架内置 MySQL、Redis、ClickHouse、MongoDB 四种数据库的客户端封装，以及 SSH 远程连接能力，可用于接口测试前后的数据准备和结果校验。
+### 6. MySQL 数据库断言
+框架内置 MySQL 数据库连接封装，测试用例中可通过 `db:` 断言关键字直接编写 SQL 语句验证数据落库，确保接口功能与数据一致性同时覆盖。
 
 ### 7. 多渠道测试结果通知
 测试执行完成后自动发送钉钉机器人消息和邮件，包含测试总数、通过数、失败数、通过率等摘要信息，方便团队及时了解测试结果。

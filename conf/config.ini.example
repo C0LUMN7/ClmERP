@@ -5,31 +5,9 @@ host = http://你的服务器地址/jshERP-boot
 [MYSQL]
 host = 你的MySQL地址
 port = 3306
-username = root
-password = 你的密码
-database = zqsjfx
-
-[REDIS]
-host = Redis服务器ip
-port = 7005
-username = ""
-password = ""
-db = db0
-
-[CLICKHOUSE]
-host = 你的ClickHouse地址
-port = 8123
-username = default
-password =
-timeout = 10
-db = default
-
-[MongoDB]
-host = MongoDB库的ip地址
-port = 27017
-username = admin
-password = 123456
-database = admin
+username = jsh_erp
+password = 数据库密码
+database = jsh_erp
 
 [EMAIL]
 host = smtp.163.com
@@ -38,14 +16,6 @@ user = 发件人邮箱地址
 passwd = 邮箱授权码
 addressee = 收件邮箱地址，多个以;隔开
 subject = 接口测试
-
-[SSH]
-host = SSH服务器地址
-port = 22
-username = root
-password = SSH密码
-timeout = 10
-command = cat /logs/web_app/xxx/common-default.log
 
 [DINGTALK]
 # 钉钉机器人 Webhook 地址（含 access_token）
