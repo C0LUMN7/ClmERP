@@ -11,23 +11,36 @@ from conf.setting import FILE_PATH
 
 @pytest.fixture(scope='module', autouse=True)
 def clear_extract_before_scenario():
-    """Preserve token from login, clear all other extract data before business scenario runs"""
-    token_val = None
+    """Preserve token, barCode, depotId from single-interface tests; clear all other extract data"""
+    preserved = {}
+    preserve_keys = ['token', 'barCode', 'depotId']
     if os.path.exists(FILE_PATH['EXTRACT']):
         with open(FILE_PATH['EXTRACT'], 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
-            if data and 'token' in data:
-                token_val = data['token']
+            if data:
+                for key in preserve_keys:
+                    if key in data:
+                        preserved[key] = data[key]
     ReadYamlData().clear_yaml_data()
-    if token_val:
-        ReadYamlData().write_yaml_data({'token': token_val})
+    for key, val in preserved.items():
+        ReadYamlData().write_yaml_data({key: val})
 
 
-@allure.feature(next(m_id) + 'ERP进销存-采购入库业务场景')
-class TestERPPurchaseBusinessScenario:
+@allure.feature(next(m_id) + 'ERP进销存-业务场景-采购入库核心链路')
+class TestPurchaseScenario:
 
-    @allure.story(next(c_id) + '供应商-商品-仓库-采购入库-库存查询流程')
-    @pytest.mark.parametrize('case_info', get_testcase_yaml('./testcase/ERP/Business_Scenario/BusinessScenario.yml'))
-    def test_business_scenario(self, case_info):
+    @allure.story(next(c_id) + '新增入库单-查询-审核-付款')
+    @pytest.mark.parametrize('case_info', get_testcase_yaml('./testcase/ERP/Business_Scenario/PurchaseScenario.yml'))
+    def test_purchase_scenario(self, case_info):
+        allure.dynamic.title(case_info['baseInfo']['api_name'])
+        RequestBase().specification_yaml(case_info)
+
+
+@allure.feature(next(m_id) + 'ERP进销存-业务场景-销售出库核心链路')
+class TestSalesScenario:
+
+    @allure.story(next(c_id) + '新增出库单-查询-审核-收款')
+    @pytest.mark.parametrize('case_info', get_testcase_yaml('./testcase/ERP/Business_Scenario/SalesScenario.yml'))
+    def test_sales_scenario(self, case_info):
         allure.dynamic.title(case_info['baseInfo']['api_name'])
         RequestBase().specification_yaml(case_info)

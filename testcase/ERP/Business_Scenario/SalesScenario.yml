@@ -1,0 +1,92 @@
+- baseInfo:
+    api_name: 创建商品含条码-销售业务场景
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建商品-销售业务场景
+      json:
+        name: 洗面奶
+        brand: 欧莱雅
+        mnemonic: xmn
+        categoryId: 91
+        unit: 瓶
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "瓶"
+            purchaseDecimal: "10"
+            commodityDecimal: "29"
+            wholesaleDecimal: "29"
+            lowDecimal: "25"
+        stock:
+          - id: "124"
+            name: "自动化测试专属仓库3"
+            initStock: "100"
+            lowSafeStock: "1"
+            highSafeStock: "9999"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+- baseInfo:
+    api_name: 新增销售出库单
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 新增出库单-销售业务场景
+      json:
+        info: '{"number":"BS_SO_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"洗面奶","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"瓶","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
+      validation:
+        - contains: { 'code': 200 }
+        - eq: { 'msg': '操作成功' }
+- baseInfo:
+    api_name: 根据单据编号查询销售出库单
+    url: /depotHead/getDetailByNumber
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 按编号查询-提取出库单ID供后续使用
+      params:
+        number: BS_SO_${fixed_timestamp()}
+      extract:
+        saleId: $.data.id
+        saleOrganId: $.data.organId
+        saleNumber: $.data.number
+        saleTotalPrice: $.data.totalPrice
+        saleDebt: $.data.debt
+      validation:
+        - contains: { 'code': 200, 'type': '出库' }
+- baseInfo:
+    api_name: 审核销售出库单
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 审核出库单（状态置为1）-销售业务场景
+      json:
+        ids: ${get_extract_data(saleId)}
+        status: "1"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+- baseInfo:
+    api_name: 新增收款单（销售收款）
+    url: /accountHead/addAccountHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 对销售出库单新增收款单-销售业务场景
+      json:
+        info: '{"organId":${get_extract_data(saleOrganId)},"billTime":"${end_time()}","billNo":"BSSK_${fixed_timestamp()}","accountId":105,"totalPrice":${get_extract_data(saleDebt)},"discountMoney":0,"changeAmount":${get_extract_data(saleDebt)},"type":"收款","status":"0"}'
+        rows: '[{"id":"${get_extract_data(saleId)}","billNumber":"${get_extract_data(saleNumber)}","needDebt":"${get_extract_data(saleDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(saleDebt)}","remark":""}]'
+      validation:
+        - contains: { 'code': 200, 'msg': '操作成功' }
