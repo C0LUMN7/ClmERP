@@ -14,7 +14,8 @@ class Assertions:
     2）响应结果相等断言
     3）响应结果不相等断言
     4）响应结果任意值断言
-    5）数据库断言
+    5）数据库断言（SQL查询结果非空）
+    6）数据库相等断言（SQL查询结果与期望值比较）
 
     """
 
@@ -161,6 +162,49 @@ class Assertions:
             logs.error("数据库断言失败，请检查数据库是否存在该数据！")
         return flag
 
+    def assert_mysql_db_eq(self, expected):
+        """
+        数据库相等断言：执行SQL查询并将第一个结果与期望值比较
+        :param expected: dict, {"sql": "SQL语句", "expect": 期望值}
+        :return: 返回flag标识，0表示正常，非0表示测试不通过
+        """
+        flag = 0
+        sql = expected.get('sql')
+        expect = expected.get('expect')
+        if not sql:
+            logs.error("db_eq断言失败：缺少sql字段")
+            return 1
+        conn = ConnectMysql()
+        try:
+            db_value = conn.query_all(sql)
+            if db_value and len(db_value) > 0 and len(db_value[0]) > 0:
+                actual = db_value[0][0]
+                if actual == expect:
+                    logs.info(f"数据库db_eq断言成功: SQL=[{sql}], 期望值=[{expect}], 实际值=[{actual}]")
+                    allure.attach(f"SQL: {sql}\n期望值: {expect}\n实际值: {actual}", "数据库断言成功",
+                                  attachment_type=allure.attachment_type.TEXT)
+                else:
+                    flag += 1
+                    logs.error(f"数据库db_eq断言失败: SQL=[{sql}], 期望值=[{expect}], 实际值=[{actual}]")
+                    allure.attach(f"SQL: {sql}\n期望值: {expect}\n实际值: {actual}", "数据库断言失败",
+                                  attachment_type=allure.attachment_type.TEXT)
+            else:
+                flag += 1
+                logs.error(f"数据库db_eq断言失败: SQL=[{sql}] 查询结果为空")
+                allure.attach(f"SQL: {sql}\n期望值: {expect}\n实际值: 空结果", "数据库断言失败",
+                              attachment_type=allure.attachment_type.TEXT)
+        except Exception as e:
+            flag += 1
+            logs.error(f"数据库db_eq断言异常: {e}")
+            allure.attach(f"SQL: {sql}\n期望值: {expect}\n异常: {e}", "数据库断言异常",
+                          attachment_type=allure.attachment_type.TEXT)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        return flag
+
     def assert_result(self, expected, response, status_code):
         """
         断言，通过断言all_flag标记，all_flag==0表示测试通过，否则为失败
@@ -190,6 +234,9 @@ class Assertions:
                         all_flag = all_flag + flag
                     elif key == 'db':
                         flag = self.assert_mysql_data(value)
+                        all_flag = all_flag + flag
+                    elif key == 'db_eq':
+                        flag = self.assert_mysql_db_eq(value)
                         all_flag = all_flag + flag
                     else:
                         logs.error("不支持此种断言方式")

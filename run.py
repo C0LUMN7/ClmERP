@@ -64,9 +64,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ERP 接口自动化测试一键回归入口')
     parser.add_argument(
         '--suite',
-        choices=['smoke', 'single', 'business', 'all'],
+        choices=['smoke', 'single', 'business', 'exception', 'all'],
         default='all',
-        help='回归范围: smoke(冒烟) / single(单接口) / business(业务链路) / all(全量)',
+        help='回归范围: smoke(冒烟) / single(单接口) / business(业务链路) / exception(异常场景) / all(全量)',
     )
     args = parser.parse_args()
     run_suite(args.suite)

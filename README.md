@@ -65,6 +65,7 @@
 - **ne** — 响应字段不相等
 - **rv** — 响应任意值断言
 - **db** — 数据库断言（执行 SQL 查询验证数据是否落库）
+- **db_eq** — 数据库相等断言（执行 SQL 查询并将结果与期望值比较）
 
 ### 6. 接口数据依赖（提取与传递）
 `extract.yaml` 作为全局变量存储文件。`base/apiutil.py` 支持使用 JSONPath 或正则表达式从接口响应中提取数据，写入 `extract.yaml`，后续用例通过 `${get_extract_data(key)}` 引用。
@@ -122,10 +123,14 @@ column-erp-testing/
 │   │   │   ├── 仓库管理/           #     仓库 CRUD（create → read → update → delete）
 │   │   │   ├── 采购管理/           #     采购入库单（新增 → 查询 → 审核 → 付款）
 │   │   │   └── 销售管理/           #     销售出库单（新增 → 查询 → 审核 → 收款）
-│   │   └── Business_Scenario/     #   业务场景测试
-│   │       ├── PurchaseScenario.yml   #   采购全链路（创建商品 → 采购入库 → 审核 → 付款）
-│   │       ├── SalesScenario.yml      #   销售全链路（创建商品 → 销售出库 → 审核 → 收款）
-│   │       └── test_business_scenario.py
+│   │   ├── Business_Scenario/     #   业务场景测试
+│   │   │   ├── PurchaseScenario.yml   #   采购全链路（创建商品 → 采购入库 → 审核 → 付款）
+│   │   │   ├── SalesScenario.yml      #   销售全链路（创建商品 → 销售出库 → 审核 → 收款）
+│   │   │   └── test_business_scenario.py
+│   │   └── Exception/              #   异常场景测试
+│   │       ├── sales_exception.yml    #   销售异常（库存溢出/重复单号/重复审核）
+│   │       ├── payment_exception.yml  #   收付款异常（超额收款）
+│   │       └── test_exception.py      #   鉴权异常(Python原生)+销售/收付款(YAML驱动)
 ├── logs/                          # 日志输出目录（自动生成）
 ├── report/                        # 测试报告目录（自动生成）
 │   ├── temp/                      #   Allure 临时结果
@@ -156,7 +161,7 @@ column-erp-testing/
 - **业务场景测试**：串联多个接口，模拟真实业务操作（如采购入库 → 查询 → 审核 → 付款）
 
 ### 断言层（common/assertions.py）
-支持五种断言模式，通过 YAML 中 `validation` 字段声明。断言失败时会累积错误 flag，最终统一判定用例结果，并将预期/实际值写入 Allure 报告。
+支持六种断言模式，通过 YAML 中 `validation` 字段声明。断言失败时会累积错误 flag，最终统一判定用例结果，并将预期/实际值写入 Allure 报告。
 
 ### 报告层（Allure）
 每个接口的执行过程（名称、地址、参数、响应、断言）都以 Allure attachment 形式记录。`run.py` 自动生成 HTML 报告并启动本地服务。
@@ -287,7 +292,7 @@ python -m http.server 8080 -d ./report/allureReport
 | `smoke`    | 冒烟测试     | 核心业务链路（采购入库链路 + 销售出库链路），快速验证系统是否可用         |
 | `single`   | 单接口测试   | 商品管理、仓库管理、采购管理、销售管理各模块的单接口 CRUD 用例            |
 | `business` | 业务链路测试 | 采购全链路（创建商品 → 入库 → 审核 → 付款）和销售全链路（创建商品 → 出库 → 审核 → 收款） |
-| `exception`| 异常场景测试 | （预留 marker，后续计划支持异常场景回归）                                 |
+| `exception`| 异常场景测试 | Token为空/错误、库存溢出、重复单号、重复审核、超额收款等异常场景校验       |
 
 ### 2. 一键执行入口
 
@@ -302,6 +307,9 @@ python run.py --suite single
 
 # 业务链路回归 — 覆盖采购/销售全链路
 python run.py --suite business
+
+# 异常场景测试 — 覆盖鉴权/库存/重复提交/超额收款异常场景
+python run.py --suite exception
 
 # 全量回归 — 执行所有用例
 python run.py --suite all
@@ -320,6 +328,9 @@ pytest -m single
 
 # 业务链路测试
 pytest -m business
+
+# 异常场景测试
+pytest -m exception
 
 # 多 marker 组合（例如仅执行既是 smoke 又是 business 的用例）
 pytest -m "smoke and business"
@@ -402,6 +413,7 @@ pytest -m "smoke and business"
 | `smoke`    | 冒烟测试（默认） | `-m smoke`         |
 | `single`   | 单接口测试       | `-m single`        |
 | `business` | 业务链路测试     | `-m business`      |
+| `exception`| 异常场景测试     | `-m exception`     |
 | `all`      | 全量测试         | 不限制 marker      |
 
 ### 3. 配置 GitHub Secrets
@@ -464,7 +476,81 @@ pytest -m "smoke and business"
 
 ---
 
-## 十二、后续优化方向
+## 十二、异常场景测试
+
+### 1. 概述
+
+在正常业务流程测试的基础上，新增了 `exception` 异常场景测试套件，用于验证系统在异常输入或异常操作下的容错能力和数据一致性。
+
+### 2. 已覆盖的异常场景
+
+| 编号 | 场景               | 所属模块 | 实现方式                 |
+| ---- | ------------------ | -------- | ------------------------ |
+| 1    | Token 为空访问核心接口 | 鉴权     | Python 原生(`test_exception.py`) |
+| 2    | Token 错误访问核心接口 | 鉴权     | Python 原生(`test_exception.py`) |
+| 3    | 销售出库数量大于库存   | 销售     | YAML 驱动(`sales_exception.yml`) |
+| 4    | 重复提交相同销售单号   | 销售     | YAML 驱动(`sales_exception.yml`) |
+| 5    | 重复审核同一张销售出库单 | 销售     | YAML 驱动(`sales_exception.yml`) |
+| 6    | 收款金额大于销售单欠款金额 | 收付款   | YAML 驱动(`payment_exception.yml`) |
+
+### 3. 异常场景校验重点
+
+- **接口校验**：接口是否正确拒绝异常请求（HTTP 状态码 ≠ 200 或返回业务错误码）
+- **数据库校验**：是否产生脏数据（无效单据、错误库存扣减、异常收付款记录）
+- **库存校验**：销售出库数量大于库存时，库存不应变成负数；重复提交/审核时，库存不应被重复扣减
+- **幂等性校验**：重复审核同一张单据时，库存扣减和单据状态变化只应发生一次
+- **超额收款记录**：当前系统允许收款金额大于欠款金额，已在测试中记录实际行为并标记为"待确认业务规则/潜在风险"
+
+### 4. 执行方式
+
+异常场景测试仅建议手动执行，不会在 `push` 时自动运行：
+
+```bash
+# 方式一：使用 run.py（推荐，自动生成 Allure 报告）
+python run.py --suite exception
+
+# 方式二：直接使用 pytest
+pytest -m exception
+```
+
+在 GitHub Actions 中可通过 `workflow_dispatch` 手动选择 `exception` 套件执行。
+
+### 5. 测试数据说明
+
+异常场景使用 `EX_` 前缀的测试数据，便于识别和清理：
+
+- `EX_MATERIAL_SC{3,4,5,6}_${timestamp()}` — 异常测试商品
+- `EX_SO_SC{3,4,5,6}_${timestamp()}` — 异常测试销售出库单号
+- `EX_SK_SC6_${timestamp()}` — 异常测试收款单号
+
+`testcase/conftest.py` 中的 `datadb_init` fixture 已包含 `EX_` 前缀数据的后置清理。
+
+### 6. 新增断言类型：db_eq
+
+在原有 `db` 断言（仅判断 SQL 查询结果非空）的基础上，新增了 `db_eq` 断言，支持将 SQL 查询结果与期望值进行精确比较：
+
+```yaml
+validation:
+  - db_eq:
+      sql: "select count(*) from jsh_depot_head where number='EX_SO_001'"
+      expect: 0
+```
+
+`db_eq` 向后兼容，不会影响现有用例。断言失败时，SQL、期望值和实际值会写入日志和 Allure 报告。
+
+### 7. 注意事项
+
+- 异常用例之间相互独立，不依赖其他异常用例的执行结果
+- 每个异常场景尽量自己准备测试数据，避免数据耦合
+- 鉴权异常（Token 为空/错误）使用 Python 原生 `requests` 实现，绕过框架自动重登机制，避免 `loginOut` 响应触发重登干扰测试结果
+- 销售/收付款异常使用 YAML 驱动 + `specification_yaml`，由框架自动处理 Token
+- 如果系统允许重复单号或超额收款，请记录实际行为并在 README 中注明为"待确认业务规则/潜在风险"
+- **已确认**：当前系统允许超额收款（收款金额 > 欠款金额），API 返回 `code=200` 并成功创建收款单和明细。该行为已在测试中记录，建议与产品确认是否属于预期设计
+- 所有异常场景结合数据库断言，验证异常请求不会产生脏数据
+
+---
+
+## 十三、后续优化方向
 
 1. ~~**接入持续集成** — 配置 Jenkins / GitHub Actions，实现代码提交后自动触发接口测试并归档报告~~ ✅ **已实现 GitHub Actions CI**（详见第十一章）
 2. **增加异常场景测试** — 目前以正常流程为主，后续补充参数缺失、参数非法、鉴权异常、并发请求等异常场景覆盖

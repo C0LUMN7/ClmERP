@@ -50,14 +50,14 @@ def datadb_init():
     conn = ConnectMysql()
     try:
         cursor = conn.cursor
-        bill_prefixes = ("PO_", "SO_", "FK_", "SK_", "BS_")
+        bill_prefixes = ("PO_", "SO_", "FK_", "SK_", "BS_", "EX_")
         for p in bill_prefixes:
             cursor.execute(f"DELETE FROM jsh_account_item WHERE bill_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_account_item WHERE header_id IN (SELECT id FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_depot_item WHERE header_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0'")
             cursor.execute(f"DELETE FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0'")
-        material_prefixes = ("电动牙刷_", "洗面奶_")
+        material_prefixes = ("电动牙刷_", "洗面奶_", "EX_")
         for p in material_prefixes:
             cursor.execute(f"DELETE FROM jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")
             cursor.execute(f"DELETE FROM jsh_material_extend WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")

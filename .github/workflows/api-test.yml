@@ -12,6 +12,7 @@ on:
           - smoke
           - single
           - business
+          - exception
           - all
   push:
     branches: [master, main]
@@ -64,6 +65,7 @@ jobs:
           pytest --collect-only -m smoke --no-header -q
           pytest --collect-only -m single --no-header -q
           pytest --collect-only -m business --no-header -q
+          pytest --collect-only -m exception --no-header -q
 
   api-test:
     if: github.event_name == 'workflow_dispatch'
