@@ -1,0 +1,165 @@
+name: ERP API Automation Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: '选择要执行的测试套件'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - single
+          - business
+          - all
+  push:
+    branches: [master, main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+  GITHUB_ACTIONS: true
+  JENKINS_CI: true
+
+jobs:
+  code-check:
+    if: github.event_name == 'push'
+    name: Code syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax check (py_compile)
+        run: |
+          python -m py_compile run.py
+          python -m py_compile conftest.py
+          python -m py_compile common/sendrequest.py
+          python -m py_compile common/readyaml.py
+          python -m py_compile common/assertions.py
+          python -m py_compile common/connection.py
+          python -m py_compile base/apiutil.py
+          python -m py_compile base/apiutil_business.py
+
+      - name: Test collection check
+        run: |
+          pytest --collect-only -m smoke --no-header -q
+          pytest --collect-only -m single --no-header -q
+          pytest --collect-only -m business --no-header -q
+
+  api-test:
+    if: github.event_name == 'workflow_dispatch'
+    name: Run ${{ github.event.inputs.suite }} suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: erp-api-test-${{ github.event.inputs.suite }}-${{ github.actor }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Set up Java (required by Allure CLI)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Allure CLI
+        run: |
+          wget -q https://github.com/allure-framework/allure2/releases/latest/download/allure_2.33.0-1_all.deb
+          sudo dpkg -i allure_2.33.0-1_all.deb
+          allure --version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check ERP_HOST connectivity
+        env:
+          ERP_HOST: ${{ secrets.ERP_HOST }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          host = os.environ.get("ERP_HOST", "")
+          if not host:
+              raise SystemExit("ERP_HOST is empty — check GitHub Secrets")
+          try:
+              r = requests.get(host, timeout=10, verify=False)
+              print(f"ERP host reachable, status: {r.status_code}")
+          except Exception as e:
+              raise SystemExit(f"ERP host unreachable: {e}")
+          PY
+
+      - name: Generate config.ini
+        run: |
+          cat > conf/config.ini <<EOF
+          [api_envi]
+          host = ${{ secrets.ERP_HOST }}
+
+          [MYSQL]
+          host = ${{ secrets.MYSQL_HOST }}
+          port = ${{ secrets.MYSQL_PORT }}
+          username = ${{ secrets.MYSQL_USERNAME }}
+          password = ${{ secrets.MYSQL_PASSWORD }}
+          database = ${{ secrets.MYSQL_DATABASE }}
+
+          [DINGTALK]
+          webhook = ${{ secrets.DINGTALK_WEBHOOK }}
+          secret = ${{ secrets.DINGTALK_SECRET }}
+
+          [EMAIL]
+          host = ${{ secrets.EMAIL_HOST }}
+          port = ${{ secrets.EMAIL_PORT }}
+          user = ${{ secrets.EMAIL_USER }}
+          passwd = ${{ secrets.EMAIL_PASSWD }}
+          addressee = ${{ secrets.EMAIL_ADDRESSEE }}
+          subject = ERP接口自动化测试报告
+
+          [REPORT_TYPE]
+          type = allure
+          EOF
+
+      - name: Run tests
+        run: python run.py --suite ${{ github.event.inputs.suite }}
+        continue-on-error: true
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: erp-api-test-${{ github.event.inputs.suite }}-${{ github.run_id }}
+          path: |
+            report/results.xml
+            report/temp/
+            report/allureReport/
+            logs/
+          retention-days: 30
+          if-no-files-found: warn

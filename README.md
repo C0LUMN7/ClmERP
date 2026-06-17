@@ -377,9 +377,91 @@ pytest -m "smoke and business"
 
 ---
 
-## 十一、后续优化方向
+## 十一、GitHub Actions 持续集成
 
-1. **接入持续集成** — 配置 Jenkins / GitHub Actions，实现代码提交后自动触发接口测试并归档报告
+本项目已接入 GitHub Actions，实现接口自动化测试的 CI 自动执行。
+
+### 1. 工作流说明
+
+工作流文件位于 `.github/workflows/api-test.yml`，名称为 **ERP API Automation Test**。
+
+当前支持以下触发方式：
+
+- **手动触发（workflow_dispatch）**：可在 GitHub Actions 页面选择测试套件后，对真实 ERP 服务执行接口自动化测试
+- **Push 触发**：当推送代码到 `master` 或 `main` 分支时，仅执行 Python 语法检查和 pytest 用例收集校验，**不发送真实接口请求**
+
+### 2. 支持的测试套件
+
+| 套件       | 说明             | 对应 pytest marker |
+| ---------- | ---------------- | ------------------ |
+| `smoke`    | 冒烟测试（默认） | `-m smoke`         |
+| `single`   | 单接口测试       | `-m single`        |
+| `business` | 业务链路测试     | `-m business`      |
+| `all`      | 全量测试         | 不限制 marker      |
+
+### 3. 配置 GitHub Secrets
+
+在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中配置以下 Secrets：
+
+| Secret 名称          | 说明                     | 是否必填 |
+| -------------------- | ------------------------ | -------- |
+| `ERP_HOST`           | ERP 服务地址（含前缀）   | 是       |
+| `MYSQL_HOST`         | MySQL 地址               | 是       |
+| `MYSQL_PORT`         | MySQL 端口               | 是       |
+| `MYSQL_USERNAME`     | MySQL 用户名             | 是       |
+| `MYSQL_PASSWORD`     | MySQL 密码               | 是       |
+| `MYSQL_DATABASE`     | MySQL 数据库名           | 是       |
+| `DINGTALK_WEBHOOK`   | 钉钉机器人 Webhook 地址  | 否       |
+| `DINGTALK_SECRET`    | 钉钉机器人加签密钥       | 否       |
+| `EMAIL_HOST`         | 邮件 SMTP 地址           | 否       |
+| `EMAIL_PORT`         | 邮件 SMTP 端口           | 否       |
+| `EMAIL_USER`         | 邮箱账号                 | 否       |
+| `EMAIL_PASSWD`       | 邮箱授权码               | 否       |
+| `EMAIL_ADDRESSEE`    | 收件人邮箱地址           | 否       |
+
+> 钉钉和邮件相关 Secrets 可为空，留空时不发送通知（`conftest.py` 在 CI 环境中自动跳过通知发送）。
+
+### 4. 手动触发步骤
+
+1. 打开 GitHub 仓库页面
+2. 点击顶部 **Actions** 选项卡
+3. 在左侧 Workflows 列表中选择 **ERP API Automation Test**
+4. 点击 **Run workflow** 按钮
+5. 在下拉菜单中选择要执行的测试套件（默认 `smoke`）
+6. 点击 **Run workflow** 确认执行
+
+### 5. 查看测试结果
+
+**手动触发（真实接口测试）** 执行完成后，在 Workflow 运行结果页面可以：
+
+1. **查看实时日志** — 点击运行中的 workflow，查看每个步骤的控制台输出
+2. **下载测试产物（Artifacts）** — 在运行结果页面底部，找到 **Artifacts** 区域，下载 `erp-api-test-<suite>-<run_id>` 压缩包，内含：
+   - `report/results.xml` — pytest JUnit 格式结果
+   - `report/temp/` — Allure 原始结果（json 文件），可在本地用 `allure generate` 生成报告
+   - `report/allureReport/` — Allure HTML 静态报告（直接打开 `index.html`）
+   - `logs/` — 运行时日志文件
+
+**Push 触发（代码检查）** 执行完成后，可在运行日志中查看 `py_compile` 语法检查结果和 `pytest --collect-only` 的用例收集统计。
+
+### 6. 安全注意事项
+
+> **⚠️ 真实接口测试请使用 workflow_dispatch 手动触发，不要在 push 时自动执行。** 当前测试用例包含创建商品、采购入库→审核→付款、销售出库→审核→收款等有副作用的操作。push 触发仅做代码语法检查和用例收集校验，不发送真实接口请求，避免污染测试环境。
+
+- **不建议在生产环境执行新增、修改、删除、审核、付款、收款等有副作用的自动化用例**
+- 如果需要在生产环境执行，建议仅运行只读接口或健康检查类 `smoke` 用例
+- 云服务器安全组需要允许 GitHub Actions 的公网 IP 访问 API 服务（参考 [GitHub Actions IP 范围](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-githubs-ip-addresses)）
+- 如果测试用例包含数据库断言，MySQL 也必须能被 GitHub Actions 访问
+- 如果不希望数据库暴露公网，建议改用 **self-hosted runner**（在云服务器内安装 GitHub Actions Runner）或通过 Jenkins 在云服务器内网执行
+
+### 7. Workflow 徽章
+
+[![ERP API Automation Test](https://github.com/C0LUMN7/column-erp-testing/actions/workflows/api-test.yml/badge.svg)](https://github.com/C0LUMN7/column-erp-testing/actions/workflows/api-test.yml)
+
+---
+
+## 十二、后续优化方向
+
+1. ~~**接入持续集成** — 配置 Jenkins / GitHub Actions，实现代码提交后自动触发接口测试并归档报告~~ ✅ **已实现 GitHub Actions CI**（详见第十一章）
 2. **增加异常场景测试** — 目前以正常流程为主，后续补充参数缺失、参数非法、鉴权异常、并发请求等异常场景覆盖
 3. **测试数据自动准备与清理** — 目前 `datadb_init` fixture 中数据清理代码为占位状态，后续完善数据库层面的前置数据写入和后置清理机制
 4. **增加 Mock 测试** — 当被测接口依赖第三方系统或环境不稳定时，引入 Mock 机制隔离外部依赖

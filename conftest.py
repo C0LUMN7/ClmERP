@@ -14,7 +14,7 @@ import warnings
 
 yfd = ReadYamlData()
 
-_IN_CI = os.getenv('JENKINS_CI', '').lower() == 'true'
+_IN_CI = any(os.getenv(var, '').lower() == 'true' for var in ['CI', 'GITHUB_ACTIONS', 'JENKINS_CI'])
 
 
 @pytest.fixture(scope="session", autouse=True)
