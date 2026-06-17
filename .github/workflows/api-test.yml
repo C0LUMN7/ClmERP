@@ -93,10 +93,13 @@ jobs:
 
       - name: Install Allure CLI
         run: |
+          set -e
           ALLURE_VERSION=2.33.0
-          curl -fL --retry 3 -o allure.deb "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
-          sudo dpkg -i allure.deb
-          allure --version
+          curl -fL --retry 3 -o allure.tgz "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz"
+          tar -zxf allure.tgz
+          sudo mv "allure-${ALLURE_VERSION}" /opt/allure
+          echo "/opt/allure/bin" >> $GITHUB_PATH
+          /opt/allure/bin/allure --version
 
       - name: Install dependencies
         run: |
