@@ -103,7 +103,7 @@ class TestExceptionScenario:
     # 收付款异常
     # ============================================================
 
-    @allure.story(next(c_id) + '收付款异常')
+    @allure.story(next(c_id) + '超额收款边界场景')
     @pytest.mark.parametrize(
         "case_info",
         get_testcase_yaml("./testcase/ERP/Exception/payment_exception.yml")

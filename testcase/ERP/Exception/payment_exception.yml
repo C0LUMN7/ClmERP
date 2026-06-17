@@ -84,14 +84,14 @@
         - db: "SELECT id FROM jsh_depot_head WHERE id = ${get_extract_data(exSaleId_SC6)} AND status = '1' AND delete_flag = '0'"
 
 - baseInfo:
-    api_name: 收款金额大于欠款-系统实际行为记录
+    api_name: 超额收款边界场景-系统允许-数据一致性校验
     url: /accountHead/addAccountHeadAndDetail
     method: POST
     header:
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 收款金额999（欠款29），系统允许超额收款，记录实际行为（待确认业务规则/潜在风险）
+    - case_name: 当前ERP系统允许超额收款，按实际返回成功断言，重点校验数据一致性
       json:
         info: '{"organId":${get_extract_data(exSaleOrganId_SC6)},"billTime":"${end_time()}","billNo":"EX_SK_SC6_${fixed_timestamp()}","accountId":105,"totalPrice":999,"discountMoney":0,"changeAmount":999,"type":"收款","status":"0"}'
         rows: '[{"id":"${get_extract_data(exSaleId_SC6)}","billNumber":"${get_extract_data(exSaleNumber_SC6)}","needDebt":"${get_extract_data(exSaleDebt_SC6)}","finishDebt":"0","eachAmount":"999","remark":""}]'
