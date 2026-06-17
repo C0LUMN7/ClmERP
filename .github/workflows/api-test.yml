@@ -93,8 +93,9 @@ jobs:
 
       - name: Install Allure CLI
         run: |
-          wget -q https://github.com/allure-framework/allure2/releases/latest/download/allure_2.33.0-1_all.deb
-          sudo dpkg -i allure_2.33.0-1_all.deb
+          ALLURE_VERSION=2.33.0
+          curl -fL --retry 3 -o allure.deb "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
+          sudo dpkg -i allure.deb
           allure --version
 
       - name: Install dependencies
