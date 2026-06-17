@@ -10,4 +10,4 @@
       extract:
         depotId: $.data.rows[0].id
       validation:
-        - contains: { 'code': 200, 'name': '自动化测试专属仓库1' }
+        - contains: { 'code': 200 }

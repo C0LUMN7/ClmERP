@@ -261,13 +261,18 @@ pytest -s -v --alluredir=./report/temp ./testcase/ERP/ --clean-alluredir
 
 ### 5. 查看报告
 
-Allure 报告生成在 `./report/allureReport/` 目录，可直接用浏览器打开 `index.html`，或执行以下命令自动打开：
+Allure 报告生成在 `./report/allureReport/` 目录，**不要直接双击** `index.html` 打开（浏览器安全策略会阻止 JS 加载），推荐使用以下方式查看：
 
 ```bash
+# 方式一：使用 allure 命令（推荐）
 allure open ./report/allureReport
+
+# 方式二：使用 Python 内置 HTTP 服务器
+python -m http.server 8080 -d ./report/allureReport
+# 然后浏览器访问 http://localhost:8080
 ```
 
-如使用 `python run.py` 执行，报告会自动生成并打开。
+如使用 `python run.py` 执行，报告会自动生成并在本地浏览器中打开。
 
 ---
 
