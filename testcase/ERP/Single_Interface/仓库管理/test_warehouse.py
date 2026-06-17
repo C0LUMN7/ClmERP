@@ -6,6 +6,7 @@ from base.generateId import m_id, c_id
 
 
 @allure.feature(next(m_id) + 'ERP进销存-仓库管理（单接口）')
+@pytest.mark.single
 class TestWarehouse:
 
     @allure.story(next(c_id) + '新增仓库')
@@ -16,6 +17,7 @@ class TestWarehouse:
         RequestBase().specification_yaml(base_info, testcase)
 
     @allure.story(next(c_id) + '查看仓库列表')
+    @pytest.mark.smoke
     @pytest.mark.run(order=13)
     @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/仓库管理/depot_read.yaml"))
     def test_depot_list(self, base_info, testcase):

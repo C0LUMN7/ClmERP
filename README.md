@@ -271,7 +271,70 @@ allure open ./report/allureReport
 
 ---
 
-## 八、测试报告展示
+## 八、一键回归使用说明
+
+### 1. 用例分组（pytest marker）
+
+本项目基于 pytest marker 对测试用例进行逻辑分组，每个 marker 对应一类回归场景：
+
+| Marker     | 含义         | 覆盖范围                                                                 |
+| ---------- | ------------ | ------------------------------------------------------------------------ |
+| `smoke`    | 冒烟测试     | 核心业务链路（采购入库链路 + 销售出库链路），快速验证系统是否可用         |
+| `single`   | 单接口测试   | 商品管理、仓库管理、采购管理、销售管理各模块的单接口 CRUD 用例            |
+| `business` | 业务链路测试 | 采购全链路（创建商品 → 入库 → 审核 → 付款）和销售全链路（创建商品 → 出库 → 审核 → 收款） |
+| `exception`| 异常场景测试 | （预留 marker，后续计划支持异常场景回归）                                 |
+
+### 2. 一键执行入口
+
+`run.py` 封装了 marker 过滤、报告生成、CI 适配等逻辑，推荐作为日常回归入口：
+
+```bash
+# 冒烟测试 — 快速验证核心链路
+python run.py --suite smoke
+
+# 单接口回归 — 覆盖各模块单接口 CRUD
+python run.py --suite single
+
+# 业务链路回归 — 覆盖采购/销售全链路
+python run.py --suite business
+
+# 全量回归 — 执行所有用例
+python run.py --suite all
+```
+
+### 3. 直接使用 pytest
+
+也可跳过 `run.py`，直接使用 pytest 原生命令，灵活组合 marker：
+
+```bash
+# 冒烟测试
+pytest -m smoke
+
+# 单接口测试
+pytest -m single
+
+# 业务链路测试
+pytest -m business
+
+# 多 marker 组合（例如仅执行既是 smoke 又是 business 的用例）
+pytest -m "smoke and business"
+```
+
+> 推荐优先使用 `python run.py --suite <suite>`，因为它会自动处理 Allure 报告生成、环境信息注入、CI 环境检测等步骤。
+
+### 4. CI 集成说明
+
+`run.py` 自动检测以下环境变量，检测到任一为 `true` 时跳过浏览器打开步骤，适用于 Jenkins / GitHub Actions 等 CI 环境：
+
+- `CI=true`
+- `GITHUB_ACTIONS=true`
+- `JENKINS_CI=true`
+
+可在 CI 流水线中直接配置 `python run.py --suite smoke` 作为快速验证环节，或 `python run.py --suite all` 作为全量回归环节。
+
+---
+
+## 九、测试报告展示
 
 本项目使用 Allure 生成测试报告，包含以下内容：
 
@@ -286,7 +349,7 @@ allure open ./report/allureReport
 
 ---
 
-## 九、项目亮点
+## 十、项目亮点
 
 ### 1. 分层清晰的框架设计
 框架分为配置层、数据层、请求层、用例层、断言层、报告层、工具层，各层职责单一、通过 import 组合，便于维护和扩展。
@@ -314,7 +377,7 @@ allure open ./report/allureReport
 
 ---
 
-## 十、后续优化方向
+## 十一、后续优化方向
 
 1. **接入持续集成** — 配置 Jenkins / GitHub Actions，实现代码提交后自动触发接口测试并归档报告
 2. **增加异常场景测试** — 目前以正常流程为主，后续补充参数缺失、参数非法、鉴权异常、并发请求等异常场景覆盖

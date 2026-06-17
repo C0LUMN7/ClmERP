@@ -6,11 +6,12 @@ from base.generateId import m_id, c_id
 
 
 @allure.feature(next(m_id) + '销售管理（单接口）')
+@pytest.mark.single
 class TestSales:
 
     @allure.story(next(c_id) + '新增销售出库单')
     @pytest.mark.run(order=8)
-    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/销售管理/sale_add.yaml"))
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/销售管理/sale_add.yaml", flat=True))
     def test_sale_add(self, base_info, testcase):
         allure.dynamic.title(testcase['case_name'])
         RequestBase().specification_yaml(base_info, testcase)

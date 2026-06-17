@@ -136,15 +136,21 @@ class SendRequest:
                 logs.info("cookie：%s" % cookie)
             logs.info("接口返回信息：%s" % result.text if result.text else result)
 
-            # 自动重新登录：检测到loginOut时重新登录并重试
-            if result and result.text and result.text.strip() == 'loginOut':
-                logs.warning('[send_request] 检测到loginOut，正在重新登录并重试...')
-                new_token = self._relogin()
-                if new_token:
-                    if 'headers' in kwargs:
-                        kwargs['headers']['X-Access-Token'] = new_token
-                    result = session.request(**kwargs)
-                    logs.info("接口返回信息(重试)：%s" % result.text if result.text else result)
+            # 自动重新登录：检测到loginOut时循环重试（最多3次）
+            max_relogin_retries = 3
+            for rl_attempt in range(max_relogin_retries):
+                if result and result.text and result.text.strip() == 'loginOut':
+                    logs.warning(f'[send_request] 检测到loginOut，正在重新登录并重试 (第{rl_attempt+1}次)...')
+                    new_token = self._relogin()
+                    if new_token:
+                        if 'headers' in kwargs:
+                            kwargs['headers']['X-Access-Token'] = new_token
+                        result = session.request(**kwargs)
+                        logs.info("接口返回信息(重试)：%s" % result.text if result.text else result)
+                    else:
+                        break
+                else:
+                    break
 
         except requests.exceptions.ConnectionError:
             logs.error("ConnectionError--连接异常")

@@ -8,7 +8,7 @@ from conf.setting import FILE_PATH
 from yaml.scanner import ScannerError
 
 
-def get_testcase_yaml(file):
+def get_testcase_yaml(file, flat=False):
     testcase_list = []
     try:
         with open(file, 'r', encoding='utf-8') as f:
@@ -19,6 +19,12 @@ def get_testcase_yaml(file):
                 for ts in yam_data.get('testCase'):
                     param = [base_info, ts]
                     testcase_list.append(param)
+                return testcase_list
+            elif flat:
+                for item in data:
+                    base_info = item.get('baseInfo')
+                    for ts in item.get('testCase'):
+                        testcase_list.append([base_info, ts])
                 return testcase_list
             else:
                 return data

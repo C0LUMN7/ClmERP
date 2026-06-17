@@ -24,11 +24,12 @@ def clear_extract_before_purchase():
 
 
 @allure.feature(next(m_id) + '采购管理（单接口）')
+@pytest.mark.single
 class TestPurchase:
 
     @allure.story(next(c_id) + '新增采购入库单')
     @pytest.mark.run(order=4)
-    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/采购管理/buy_add.yaml"))
+    @pytest.mark.parametrize('base_info,testcase', get_testcase_yaml("./testcase/ERP/Single_Interface/采购管理/buy_add.yaml", flat=True))
     def test_depot_head_add(self, base_info, testcase):
         allure.dynamic.title(testcase['case_name'])
         RequestBase().specification_yaml(base_info, testcase)
