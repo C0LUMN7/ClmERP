@@ -62,10 +62,8 @@ jobs:
 
       - name: Test collection check
         run: |
-          pytest --collect-only -m smoke --no-header -q
-          pytest --collect-only -m single --no-header -q
-          pytest --collect-only -m business --no-header -q
-          pytest --collect-only -m exception --no-header -q
+          pytest api --collect-only --no-header -q
+          pytest ui --collect-only --no-header -q
 
   api-test:
     if: github.event_name == 'workflow_dispatch'
@@ -154,7 +152,7 @@ jobs:
           EOF
 
       - name: Run tests
-        run: python run.py --suite ${{ github.event.inputs.suite }}
+        run: python run.py api --suite ${{ github.event.inputs.suite }}
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -162,9 +160,9 @@ jobs:
         with:
           name: erp-api-test-${{ github.event.inputs.suite }}-${{ github.run_id }}
           path: |
-            report/results.xml
-            report/temp/
-            report/allureReport/
+            reports/api_results.xml
+            reports/allure-results/api/
+            reports/allure-report/
             logs/
           retention-days: 30
           if-no-files-found: warn
