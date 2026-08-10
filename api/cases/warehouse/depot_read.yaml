@@ -1,0 +1,13 @@
+- baseInfo:
+    api_name: 查询仓库列表
+    url: /depot/list
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常查询仓库列表（取第一条id供更新用）
+      extract:
+        depotId: $.data.rows[0].id
+      validation:
+        - contains: { 'code': 200 }

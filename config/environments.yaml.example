@@ -1,0 +1,47 @@
+# P0 最小多环境配置模板
+# 用法：复制为 config/environments.yaml 后按需填写；敏感值优先使用环境变量注入，
+# 禁止提交真实账号密码。当前读取逻辑以环境变量为主，本文件作为结构模板与说明。
+system:
+  name: jshERP
+  repository: https://github.com/jishenghua/jshERP
+  environment: cloud_test          # cloud_test | local，切换环境请同步 ERP_ENV
+  deployed_version: ${ERP_VERSION} # 云端测试实例部署版本，无法确认时留待确认
+  # deployed_commit: 待确认        # 可选，能够确认时再填写
+
+environments:
+  cloud_test:
+    api_url: ${ERP_API_URL}
+    ui_url: ${ERP_UI_URL}
+    mysql:
+      host: ${MYSQL_HOST}
+      port: ${MYSQL_PORT}
+      username: ${MYSQL_USERNAME}
+      password: ${MYSQL_PASSWORD}
+      database: ${MYSQL_DATABASE}
+    login:
+      username: ${ERP_USERNAME}
+      password: ${ERP_PASSWORD}
+    business_ids:
+      category_id: ${ERP_CATEGORY_ID}
+      depot_id: ${ERP_DEPOT_ID}
+      organ_id: ${ERP_ORGAN_ID}
+      account_id: ${ERP_ACCOUNT_ID}
+
+  local:
+    # 与 cloud_test 使用同一组环境变量；本地环境请覆盖 ERP_* / MYSQL_* 环境变量
+    api_url: ${ERP_API_URL}
+    ui_url: ${ERP_UI_URL}
+    mysql:
+      host: ${MYSQL_HOST}
+      port: ${MYSQL_PORT}
+      username: ${MYSQL_USERNAME}
+      password: ${MYSQL_PASSWORD}
+      database: ${MYSQL_DATABASE}
+    login:
+      username: ${ERP_USERNAME}
+      password: ${ERP_PASSWORD}
+    business_ids:
+      category_id: ${ERP_CATEGORY_ID}
+      depot_id: ${ERP_DEPOT_ID}
+      organ_id: ${ERP_ORGAN_ID}
+      account_id: ${ERP_ACCOUNT_ID}

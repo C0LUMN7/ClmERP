@@ -1,0 +1,19 @@
+- baseInfo:
+    api_name: 根据单据编号查询销售出库单
+    url: /depotHead/getDetailByNumber
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 按编号查询-提取出库单ID供审核
+      params:
+        number: SO_${fixed_timestamp()}
+      extract:
+        saleId: $.data.id
+        saleOrganId: $.data.organId
+        saleNumber: $.data.number
+        saleTotalPrice: $.data.totalPrice
+        saleDebt: $.data.debt
+      validation:
+        - contains: { 'code': 200, 'type': '出库' }

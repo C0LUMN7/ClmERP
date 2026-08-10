@@ -1,0 +1,13 @@
+- baseInfo:
+    api_name: 删除仓库
+    url: /depot/delete
+    method: DELETE
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 删除仓库（自动化测试专属仓库2）
+      params:
+        id: ${get_extract_data(depotId)}
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }

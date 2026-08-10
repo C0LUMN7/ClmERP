@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 商品更新
+    url: /material/update
+    method: PUT
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 更新商品品牌
+      json:
+        id: ${get_extract_data(goodsId)}
+        brand: 飞利浦
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }

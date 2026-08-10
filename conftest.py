@@ -51,7 +51,8 @@ def generate_test_summary(terminalreporter):
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """自动收集pytest框架执行的测试结果并打印摘要信息"""
     summary = generate_test_summary(terminalreporter)
-    if _IN_CI:
+    # collect-only 模式（--collect-only）只打印摘要，不发送钉钉/邮件通知，避免收集命令产生外部副作用
+    if _IN_CI or config.option.collectonly:
         return
     if dd_msg:
         send_dd_msg(summary)

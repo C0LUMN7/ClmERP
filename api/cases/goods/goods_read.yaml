@@ -1,0 +1,13 @@
+- baseInfo:
+    api_name: 商品查询
+    url: /material/list
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常查询商品列表（取第一条id供更新用）
+      extract:
+        goodsId: $.data.rows[0].id
+      validation:
+        - contains: { 'code': 200 }

@@ -31,3 +31,23 @@ environment.xml/
 /*.json
 /*.pdf
 extracted_images/
+
+# ---- P0 合并骨架新增 ----
+# 统一报告与运行产物（reports/ 保留说明文件，其余全部忽略）
+reports/*
+!reports/README.md
+allure-results/
+allure-report/
+allure_report/
+test-results/
+playwright-report/
+
+# 运行期敏感临时文件（Playwright storage_state 等）
+.runtime/
+
+# 本地环境配置（真实凭据，禁止提交，仅提交 example 模板）
+config/environments.yaml
+
+# 运行期日志产物（兼容旧反斜杠路径遗留的根目录日志文件，如 logs\test.20260810.log）
+logs\*.log
+*.log

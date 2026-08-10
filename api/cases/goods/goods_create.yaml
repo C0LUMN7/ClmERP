@@ -1,0 +1,32 @@
+- baseInfo:
+    api_name: 新增商品
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增商品（带库存和价格）
+      json:
+        name: 电动牙刷_${fixed_timestamp()}
+        brand: 笑容加
+        mnemonic: ddys
+        categoryId: 91
+        unit: 支
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "支"
+            purchaseDecimal: "200"
+            commodityDecimal: "299"
+            wholesaleDecimal: "299"
+            lowDecimal: "259"
+        stock:
+          - id: "124"
+            name: "自动化测试专属仓库3"
+            initStock: "100"
+            lowSafeStock: "1"
+            highSafeStock: "9999"
+      validation:
+        - contains: { 'message': '成功' }
+        - eq: { 'code': 200 }
+        - db: "SELECT id FROM jsh_material WHERE name = '电动牙刷_${fixed_timestamp()}' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"

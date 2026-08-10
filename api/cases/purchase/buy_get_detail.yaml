@@ -1,0 +1,19 @@
+- baseInfo:
+    api_name: 根据单据编号查询采购入库单
+    url: /depotHead/getDetailByNumber
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 按编号查询-提取入库单ID供后续使用
+      params:
+        number: PO_${fixed_timestamp()}
+      extract:
+        buyId: $.data.id
+        buyOrganId: $.data.organId
+        buyNumber: $.data.number
+        buyTotalPrice: $.data.totalPrice
+        buyDebt: $.data.debt
+      validation:
+        - contains: { 'code': 200 ,'type': '入库' }

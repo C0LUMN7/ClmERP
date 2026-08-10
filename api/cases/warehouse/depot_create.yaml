@@ -1,0 +1,14 @@
+- baseInfo:
+    api_name: 新增仓库
+    url: /depot/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 正常新增仓库
+      json:
+        name: 自动化测试专属仓库1
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+        - db: "SELECT id FROM jsh_depot WHERE name = '自动化测试专属仓库1' AND delete_Flag = '0'"

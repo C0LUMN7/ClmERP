@@ -1,0 +1,230 @@
+# ============================================================
+# Exception Scenario 3: 销售出库数量大于库存
+# ============================================================
+- baseInfo:
+    api_name: 创建测试商品-库存溢出异常场景
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建商品，初始库存100
+      json:
+        name: EX_MATERIAL_SC3_${fixed_timestamp()}
+        brand: 异常测试
+        mnemonic: exsc3
+        categoryId: 91
+        unit: 支
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "支"
+            purchaseDecimal: "29"
+            commodityDecimal: "29"
+            wholesaleDecimal: "29"
+            lowDecimal: "25"
+        stock:
+          - id: "124"
+            name: "自动化测试专属仓库3"
+            initStock: "100"
+            lowSafeStock: "1"
+            highSafeStock: "9999"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+
+- baseInfo:
+    api_name: 销售出库数量大于库存-应拒绝
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 出库数量传99999，期望接口拒绝
+      json:
+        info: '{"number":"EX_SO_SC3_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":2899971,"changeAmount":0,"debt":2899971,"discount":0,"discountMoney":0,"discountLastMoney":2899971,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"EX_MATERIAL_SC3_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":99999,"unitPrice":29,"allPrice":2899971,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":2899971}]'
+      validation:
+        - ne: { 'code': 200 }
+        - db_eq:
+            sql: "select count(*) from jsh_depot_head where number = 'EX_SO_SC3_${fixed_timestamp()}' AND delete_flag = '0'"
+            expect: 0
+        - db_eq:
+            sql: "select current_number from jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE 'EX_MATERIAL_SC3_%' AND delete_flag = '0') AND depot_id = 124"
+            expect: 100
+
+# ============================================================
+# Exception Scenario 4: 重复提交相同销售单号
+# ============================================================
+- baseInfo:
+    api_name: 创建测试商品-重复单号异常场景
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建商品，用于重复单号测试
+      json:
+        name: EX_MATERIAL_SC4_${fixed_timestamp()}
+        brand: 异常测试
+        mnemonic: exsc4
+        categoryId: 91
+        unit: 支
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "支"
+            purchaseDecimal: "29"
+            commodityDecimal: "29"
+            wholesaleDecimal: "29"
+            lowDecimal: "25"
+        stock:
+          - id: "124"
+            name: "自动化测试专属仓库3"
+            initStock: "100"
+            lowSafeStock: "1"
+            highSafeStock: "9999"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+
+- baseInfo:
+    api_name: 第一次提交销售出库单-应成功
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 使用固定单号第一次提交，期望成功
+      json:
+        info: '{"number":"EX_SO_SC4_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"EX_MATERIAL_SC4_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
+      validation:
+        - contains: { 'code': 200 }
+        - eq: { 'msg': '操作成功' }
+        - db_eq:
+            sql: "select count(*) from jsh_depot_head where number = 'EX_SO_SC4_${fixed_timestamp()}' AND delete_flag = '0'"
+            expect: 1
+
+- baseInfo:
+    api_name: 第二次提交相同销售单号-应拒绝
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 使用相同单号第二次提交，期望拒绝
+      json:
+        info: '{"number":"EX_SO_SC4_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"EX_MATERIAL_SC4_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
+      validation:
+        - ne: { 'code': 200 }
+        - db_eq:
+            sql: "select count(*) from jsh_depot_head where number = 'EX_SO_SC4_${fixed_timestamp()}' AND delete_flag = '0'"
+            expect: 1
+
+# ============================================================
+# Exception Scenario 5: 重复审核同一张销售出库单
+# ============================================================
+- baseInfo:
+    api_name: 创建测试商品-重复审核异常场景
+    url: /material/add
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建商品，初始库存100
+      json:
+        name: EX_MATERIAL_SC5_${fixed_timestamp()}
+        brand: 异常测试
+        mnemonic: exsc5
+        categoryId: 91
+        unit: 支
+        meList:
+          - barCode: "${gen_bar_code()}"
+            commodityUnit: "支"
+            purchaseDecimal: "29"
+            commodityDecimal: "29"
+            wholesaleDecimal: "29"
+            lowDecimal: "25"
+        stock:
+          - id: "124"
+            name: "自动化测试专属仓库3"
+            initStock: "100"
+            lowSafeStock: "1"
+            highSafeStock: "9999"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+
+- baseInfo:
+    api_name: 创建销售出库单-重复审核测试
+    url: /depotHead/addDepotHeadAndDetail
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 创建销售出库单，数量1，金额29
+      json:
+        info: '{"number":"EX_SO_SC5_${fixed_timestamp()}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
+        rows: '[{"name":"EX_MATERIAL_SC5_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":124,"operNumber":1,"unitPrice":29,"allPrice":29,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":29}]'
+      validation:
+        - contains: { 'code': 200 }
+        - eq: { 'msg': '操作成功' }
+
+- baseInfo:
+    api_name: 按单据编号查询销售出库单
+    url: /depotHead/getDetailByNumber
+    method: GET
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 按单号查询-提取出库单ID
+      params:
+        number: EX_SO_SC5_${fixed_timestamp()}
+      extract:
+        exSaleId_SC5: $.data.id
+        exSaleOrganId_SC5: $.data.organId
+        exSaleNumber_SC5: $.data.number
+        exSaleDebt_SC5: $.data.debt
+      validation:
+        - contains: { 'code': 200, 'type': '出库' }
+
+- baseInfo:
+    api_name: 第一次审核销售出库单-应成功
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 审核出库单（状态置为1），首次审核
+      json:
+        ids: ${get_extract_data(exSaleId_SC5)}
+        status: "1"
+      validation:
+        - contains: { 'code': 200, 'message': '成功' }
+        - db: "SELECT id FROM jsh_depot_head WHERE id = ${get_extract_data(exSaleId_SC5)} AND status = '1' AND delete_flag = '0'"
+        - db_eq:
+            sql: "select current_number from jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE 'EX_MATERIAL_SC5_%' AND delete_flag = '0') AND depot_id = 124"
+            expect: 99
+
+- baseInfo:
+    api_name: 第二次审核同一张销售出库单-应幂等
+    url: /depotHead/batchSetStatus
+    method: POST
+    header:
+      Content-Type: application/json;charset=UTF-8
+      X-Access-Token: ${get_extract_data(token)}
+  testCase:
+    - case_name: 再次审核同一出库单，库存不应重复扣减
+      json:
+        ids: ${get_extract_data(exSaleId_SC5)}
+        status: "1"
+      validation:
+        - db_eq:
+            sql: "select current_number from jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE 'EX_MATERIAL_SC5_%' AND delete_flag = '0') AND depot_id = 124"
+            expect: 99
