@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "登录接口响应契约",
+  "description": "校验 /user/login 响应中框架依赖的关键字段：code、msgTip、data.token",
+  "type": "object",
+  "required": ["code", "data"],
+  "properties": {
+    "code": {
+      "type": "integer",
+      "description": "业务状态码，200 表示成功"
+    },
+    "msgTip": {
+      "type": "string",
+      "description": "登录提示信息"
+    },
+    "data": {
+      "type": "object",
+      "required": ["token"],
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "登录令牌，后续接口通过 X-Access-Token 请求头携带"
+        }
+      }
+    }
+  }
+}

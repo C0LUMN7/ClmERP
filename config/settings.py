@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""P0: 统一配置读取（最小多环境：cloud_test / local）
+"""统一配置读取（最小多环境：cloud_test / local）
 
 - 环境选择：ERP_ENV=cloud_test|local，默认 cloud_test
 - 敏感凭据一律通过环境变量或本地未提交配置注入，本文件不写入真实账号密码
@@ -9,7 +9,7 @@ import os
 
 ENV = os.getenv('ERP_ENV', 'cloud_test')
 
-# 被测系统信息（P0 目标 6：明确被测系统为开源项目 jshERP）
+# 被测系统信息（明确被测系统为开源项目 jshERP）
 SYSTEM = {
     'name': 'jshERP',
     'repository': 'https://github.com/jishenghua/jshERP',
@@ -38,6 +38,17 @@ BUSINESS_IDS = {
     'organ_id': os.getenv('ERP_ORGAN_ID', ''),
     'account_id': os.getenv('ERP_ACCOUNT_ID', ''),
 }
+
+
+def get_api_url():
+    """ERP API 地址：优先环境变量 ERP_API_URL，缺失时兼容本地 conf/config.ini
+
+    统一 API 框架的地址读取入口，避免各执行器各自硬编码或重复读取配置。
+    """
+    if ERP_API_URL:
+        return ERP_API_URL.rstrip('/')
+    from conf.operationConfig import OperationConfig
+    return OperationConfig().get_section_for_data('api_envi', 'host').rstrip('/')
 
 
 def preflight():

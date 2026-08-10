@@ -10,7 +10,7 @@ from common.readyaml import get_testcase_yaml
 from common.connection import ConnectMysql
 from base.apiutil_business import RequestBase
 from base.generateId import m_id, c_id
-from conf.operationConfig import OperationConfig
+from config.settings import get_api_url
 
 
 @pytest.mark.exception
@@ -24,7 +24,7 @@ class TestExceptionScenario:
     @allure.story(next(c_id) + '鉴权异常')
     def test_auth_token_empty(self):
         """Token为空访问写接口，不应写入成功"""
-        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        host = get_api_url()
         order_no = f"EX_AUTH_{int(time.time() * 1000)}"
 
         allure.dynamic.title("Token为空-新增销售出库单")
@@ -55,7 +55,7 @@ class TestExceptionScenario:
     @allure.story(next(c_id) + '鉴权异常')
     def test_auth_token_invalid(self):
         """Token无效访问写接口，不应写入成功"""
-        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        host = get_api_url()
         order_no = f"EX_AUTH_{int(time.time() * 1000)}"
 
         allure.dynamic.title("Token无效-新增销售出库单")

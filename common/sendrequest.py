@@ -8,7 +8,6 @@ import time
 from conf import setting
 from common.recordlog import logs
 from requests import utils
-from common.readyaml import ReadYamlData
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
@@ -17,7 +16,12 @@ class SendRequest:
 
     def __init__(self, cookie=None):
         self.cookie = cookie
-        self.read = ReadYamlData()
+
+    @staticmethod
+    def _write_context(values):
+        """运行期数据写入当前会话运行上下文，不再写全局 extract.yaml"""
+        from api.framework.yaml_loader import get_run_context
+        get_run_context().update(values)
 
     def get(self, url, data, header):
         """
@@ -94,18 +98,21 @@ class SendRequest:
         return response_dict
 
     def _relogin(self):
-        """重新登录获取新token"""
-        from conf.operationConfig import OperationConfig
+        """重新登录获取新token（登录凭据从 config/settings.py 环境变量读取）"""
+        from config.settings import ERP_USERNAME, ERP_PASSWORD, get_api_url
         from common.debugtalk import DebugTalk
-        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        if not ERP_USERNAME or not ERP_PASSWORD:
+            logs.error('登录凭据未配置：请通过环境变量 ERP_USERNAME / ERP_PASSWORD 提供测试账号密码')
+            return None
+        host = get_api_url()
         dt = DebugTalk()
         for attempt in range(5):
             DebugTalk._captcha_data = None
             time.sleep(1)
             try:
                 payload = {
-                    'loginName': 'jsh',
-                    'password': dt.md5_encryption('123456'),
+                    'loginName': ERP_USERNAME,
+                    'password': dt.md5_encryption(ERP_PASSWORD),
                     'code': dt.get_captcha_code(),
                     'uuid': dt.get_captcha_uuid()
                 }
@@ -115,7 +122,7 @@ class SendRequest:
                     data = r.json()
                     new_token = data.get('data', {}).get('token')
                     if new_token:
-                        self.read.write_yaml_data({'token': new_token})
+                        self._write_context({'token': new_token})
                         logs.info(f'[send_request] 重新登录成功，新token: {new_token}')
                         return new_token
             except Exception as e:
@@ -132,7 +139,7 @@ class SendRequest:
             set_cookie = requests.utils.dict_from_cookiejar(result.cookies)
             if set_cookie:
                 cookie['Cookie'] = set_cookie
-                self.read.write_yaml_data(cookie)
+                self._write_context(cookie)
                 logs.info("cookie：%s" % cookie)
             logs.info("接口返回信息：%s" % result.text if result.text else result)
 

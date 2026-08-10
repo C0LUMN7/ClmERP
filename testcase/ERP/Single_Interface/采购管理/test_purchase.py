@@ -1,26 +1,9 @@
 import allure
 import pytest
-import yaml
-import os
 
-from common.readyaml import get_testcase_yaml, ReadYamlData
+from common.readyaml import get_testcase_yaml
 from base.apiutil import RequestBase
 from base.generateId import m_id, c_id
-from conf.setting import FILE_PATH
-
-
-@pytest.fixture(scope='module', autouse=True)
-def clear_extract_before_purchase():
-    save_data = {}
-    if os.path.exists(FILE_PATH['EXTRACT']):
-        with open(FILE_PATH['EXTRACT'], 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-            if data:
-                for key in data:
-                    save_data[key] = data[key]
-    ReadYamlData().clear_yaml_data()
-    if save_data:
-        ReadYamlData().write_yaml_data(save_data)
 
 
 @allure.feature(next(m_id) + '采购管理（单接口）')

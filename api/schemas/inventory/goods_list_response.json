@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "商品列表查询响应契约",
+  "description": "校验 /material/list 响应中框架依赖的关键字段：code、data.total、data.rows、行内 id",
+  "type": "object",
+  "required": ["code", "data"],
+  "properties": {
+    "code": {
+      "type": "integer",
+      "description": "业务状态码，200 表示成功"
+    },
+    "msg": {
+      "type": "string",
+      "description": "响应消息"
+    },
+    "data": {
+      "type": "object",
+      "required": ["rows"],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "description": "商品总数"
+        },
+        "rows": {
+          "type": "array",
+          "description": "商品列表",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "description": "商品 ID，后续更新/删除接口依赖"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -6,11 +6,11 @@ import time
 
 urllib3.disable_warnings()
 
-from common.readyaml import get_testcase_yaml
+from api.framework.yaml_loader import load_case_pairs
+from api.framework.runner import run_case
 from common.connection import ConnectMysql
-from base.apiutil_business import RequestBase
 from base.generateId import m_id, c_id
-from conf.operationConfig import OperationConfig
+from config.settings import get_api_url
 
 
 @pytest.mark.exception
@@ -24,7 +24,7 @@ class TestExceptionScenario:
     @allure.story(next(c_id) + '鉴权异常')
     def test_auth_token_empty(self):
         """Token为空访问写接口，不应写入成功"""
-        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        host = get_api_url()
         order_no = f"EX_AUTH_{int(time.time() * 1000)}"
 
         allure.dynamic.title("Token为空-新增销售出库单")
@@ -55,7 +55,7 @@ class TestExceptionScenario:
     @allure.story(next(c_id) + '鉴权异常')
     def test_auth_token_invalid(self):
         """Token无效访问写接口，不应写入成功"""
-        host = OperationConfig().get_section_for_data('api_envi', 'host')
+        host = get_api_url()
         order_no = f"EX_AUTH_{int(time.time() * 1000)}"
 
         allure.dynamic.title("Token无效-新增销售出库单")
@@ -92,12 +92,12 @@ class TestExceptionScenario:
 
     @allure.story(next(c_id) + '销售异常')
     @pytest.mark.parametrize(
-        "case_info",
-        get_testcase_yaml("./api/cases/negative/sales_exception.yml")
+        "base_info,testcase",
+        load_case_pairs("./api/cases/negative/sales_exception.yml")
     )
-    def test_sales_exception(self, case_info):
-        allure.dynamic.title(case_info["baseInfo"]["api_name"])
-        RequestBase().specification_yaml(case_info)
+    def test_sales_exception(self, base_info, testcase):
+        allure.dynamic.title(testcase["case_name"])
+        run_case(base_info, testcase, yaml_file="./api/cases/negative/sales_exception.yml")
 
     # ============================================================
     # 收付款异常
@@ -105,9 +105,9 @@ class TestExceptionScenario:
 
     @allure.story(next(c_id) + '超额收款边界场景')
     @pytest.mark.parametrize(
-        "case_info",
-        get_testcase_yaml("./api/cases/negative/payment_exception.yml")
+        "base_info,testcase",
+        load_case_pairs("./api/cases/negative/payment_exception.yml")
     )
-    def test_payment_exception(self, case_info):
-        allure.dynamic.title(case_info["baseInfo"]["api_name"])
-        RequestBase().specification_yaml(case_info)
+    def test_payment_exception(self, base_info, testcase):
+        allure.dynamic.title(testcase["case_name"])
+        run_case(base_info, testcase, yaml_file="./api/cases/negative/payment_exception.yml")

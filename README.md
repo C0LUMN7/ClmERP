@@ -17,7 +17,7 @@
 ## 项目亮点
 
 - **YAML 数据驱动** — 测试数据与脚本分离，新增接口用例只需编写 YAML 文件，无需修改框架代码
-- **JSONPath 提取与接口参数传递** — 通过 `extract.yaml` 实现接口间数据依赖，一个接口的响应字段可自动提取并传递给后续接口，串联完整业务链路
+- **JSONPath 提取与接口参数传递** — 通过会话运行上下文实现接口间数据依赖，一个接口的响应字段可自动提取并传递给后续接口，串联完整业务链路
 - **Token 自动管理** — session 级 fixture 自动完成登录鉴权，Token 过期时自动检测并重新登录，保证长时间测试稳定性
 - **多类型断言 + MySQL 数据库断言** — 支持 contains、eq、ne、rv、db、db_eq 六种断言，不只验证状态码，还校验数据落库一致性
 - **全面的场景覆盖** — 覆盖单接口 CRUD、采购/销售完整业务链路、Token 鉴权异常、库存溢出、重复提交、重复审核、超额收款等异常与边界场景
@@ -41,8 +41,10 @@
 
 ```
 column-erp-testing/
-├── api/                      # API 自动化（P0 合并骨架）
+├── api/                      # API 自动化
 │   ├── conftest.py           # API 登录、Token、数据清理 fixture
+│   ├── framework/            # 统一 API 执行器：runner / yaml_loader / template / assertions
+│   ├── schemas/              # 关键稳定接口的 JSON Schema 契约
 │   ├── login.yaml            # 登录用例（真实 YAML 基线）
 │   └── cases/
 │       ├── goods/            # 商品管理单接口测试及 YAML
@@ -51,17 +53,17 @@ column-erp-testing/
 │       ├── sales/            # 销售管理单接口测试及 YAML
 │       ├── scenarios/        # 采购、销售完整接口链路
 │       └── negative/         # 异常与边界测试
-├── ui/                       # Playwright UI 自动化（P0 技术骨架）
-│   ├── conftest.py           # 浏览器/Context fixture 骨架（P2 启用）
-│   └── cases/                # P0 仅收集骨架用例，正式 ERP UI 用例待 P2
-├── performance/              # Locust 性能测试（P0 骨架目录，P4 实现）
-├── shared/                   # API/UI/性能共享能力（P0 骨架目录）
-├── config/                   # 统一配置（P0 新增）
+├── ui/                       # Playwright UI 自动化（技术骨架）
+│   ├── conftest.py           # 浏览器/Context fixture 骨架（后续启用）
+│   └── cases/                # 当前仅收集骨架用例，正式 ERP UI 用例待真实页面资料
+├── performance/              # Locust 性能测试（骨架目录，后续实现）
+├── shared/                   # API/UI/性能共享能力（骨架目录）
+├── config/                   # 统一配置
 │   ├── settings.py           # 多环境配置读取与 preflight 预检
 │   └── environments.yaml.example
 ├── reports/                  # 统一运行产物（Git 忽略）
-├── base/                     # 核心框架层（现有）：请求调度、参数替换、断言、自动重登
-├── common/                   # 公共组件层（现有）：断言引擎、数据库连接、动态数据生成、通知
+├── base/                     # 核心框架层（兼容层）：委托统一 Runner 执行
+├── common/                   # 公共组件层：断言引擎、数据库连接、动态数据生成、通知
 ├── conf/                     # 配置层（现有）：config.ini、环境信息、全局常量
 ├── testcase/ERP/             # 原接口项目用例（保留，已复制迁移至 api/cases/）
 ├── .github/workflows/        # GitHub Actions 工作流定义
@@ -73,11 +75,11 @@ column-erp-testing/
 ## 核心流程
 
 1. 读取 `conf/config.ini` 获取环境与数据库配置
-2. session 级 fixture 自动登录，识别验证码，提取 Token 并写入 `extract.yaml`
+2. session 级 fixture 自动登录，识别验证码，提取 Token 并写入会话运行上下文
 3. 加载 YAML 测试用例
 4. 替换动态参数，如 `${timestamp()}`、`${get_extract_data(token)}`
 5. 发送 HTTP 请求
-6. 使用 JSONPath 提取响应字段并写入 `extract.yaml`
+6. 使用 JSONPath 提取响应字段并写入会话运行上下文
 7. 执行响应断言和数据库断言
 8. 生成 Allure 报告、JUnit XML 和日志
 9. 本地通过 `allure open` 查看报告；CI 中上传 artifacts
@@ -104,7 +106,7 @@ python run.py ui --suite all
 # 环境预检（对已配置项给出明确结果，缺失项标记待配置）
 python run.py preflight
 
-# 或直接使用 pytest 原生命令（P0 阶段门禁）
+# 或直接使用 pytest 原生命令（用例收集检查）
 pytest api --collect-only
 pytest ui --collect-only
 pytest -m smoke api

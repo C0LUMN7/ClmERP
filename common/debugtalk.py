@@ -21,12 +21,18 @@ class DebugTalk:
 
     def get_extract_data(self, node_name, randoms=None) -> str:
         """
-        获取extract.yaml数据，首先判断randoms是否为数字类型，如果不是就获取下一个node节点的数据
-        :param node_name: extract.yaml文件中的key值
+        获取提取变量：优先读取当前测试会话运行上下文（内存），缺失时兼容旧 extract.yaml
+        :param node_name: 变量名
         :param randoms: int类型，0：随机读取；-1：读取全部，返回字符串形式；-2：读取全部，返回列表形式；其他根据列表索引取值，取第一个值为1，第二个为2，以此类推;
         :return:
         """
+        from api.framework.yaml_loader import get_run_context
+        context = get_run_context()
+        if node_name in context:
+            return self._pick_context_value(context.get(node_name), randoms)
         data = self.read.get_extract_yaml(node_name)
+        if data is None:
+            raise KeyError(f'运行上下文缺少变量 {node_name}（变量来源：当前会话接口提取结果或旧 extract.yaml）')
         if randoms is not None and bool(re.compile(r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$').match(randoms)):
             randoms = int(randoms)
             data_value = {
@@ -40,15 +46,30 @@ class DebugTalk:
             data = self.read.get_extract_yaml(node_name, randoms)
         return data
 
+    @staticmethod
+    def _pick_context_value(value, randoms):
+        """从运行上下文取值；randoms 仅对列表值生效，语义与旧 extract.yaml 一致"""
+        if randoms is None or not isinstance(value, list):
+            return value
+        if not re.match(r'^[-+]?[0-9]+$', randoms):
+            return value
+        index = int(randoms)
+        if index == 0:
+            return random.choice(value)
+        if index == -1:
+            return ','.join(str(v) for v in value)
+        if index == -2:
+            return value
+        return value[index - 1]
+
     def get_extract_order_data(self, data, randoms):
         """获取extract.yaml数据，不为0、-1、-2，则按顺序读取文件key的数据"""
         if randoms not in [0, -1, -2]:
             return data[randoms - 1]
 
     def _get_host(self):
-        from conf.operationConfig import OperationConfig
-        conf = OperationConfig()
-        return conf.get_section_for_data('api_envi', 'host')
+        from config.settings import get_api_url
+        return get_api_url()
 
     def _get_captcha(self):
         if DebugTalk._captcha_data is None:
@@ -86,6 +107,20 @@ class DebugTalk:
 
     def get_captcha_uuid(self):
         return self._get_captcha()['uuid']
+
+    def get_login_name(self):
+        """登录账号：从环境变量 ERP_USERNAME 读取，避免写入 YAML"""
+        from config.settings import ERP_USERNAME
+        if not ERP_USERNAME:
+            raise RuntimeError('登录账号未配置：请通过环境变量 ERP_USERNAME 提供测试账号，不要写入代码或 YAML')
+        return ERP_USERNAME
+
+    def get_login_password(self):
+        """登录密码的 MD5：从环境变量 ERP_PASSWORD 读取，避免写入 YAML"""
+        from config.settings import ERP_PASSWORD
+        if not ERP_PASSWORD:
+            raise RuntimeError('登录密码未配置：请通过环境变量 ERP_PASSWORD 提供测试密码，不要写入代码或 YAML')
+        return self.md5_encryption(ERP_PASSWORD)
 
     def md5_encryption(self, params):
         """参数MD5加密"""
@@ -238,24 +273,19 @@ class DebugTalk:
         return DebugTalk._fixed_ts
 
     def gen_bar_code(self):
-        """生成唯一条码并保存到 extract.yaml，供后续 depotHead 使用"""
+        """生成唯一条码并写入运行上下文，供后续 depotHead 使用
+
+        Token 优先从运行上下文读取，缺失时兼容旧 extract.yaml；不再写根目录 extract.yaml。
+        """
         import requests as req
-        import yaml
-        from conf.operationConfig import OperationConfig
-        from conf.setting import FILE_PATH
-        conf = OperationConfig()
-        host = conf.get_section_for_data('api_envi', 'host')
-        token = self.read.get_extract_yaml('token')
+        from api.framework.yaml_loader import get_run_context
+        from config.settings import get_api_url
+        context = get_run_context()
+        host = get_api_url()
+        token = context.get('token') if 'token' in context else self.read.get_extract_yaml('token')
         headers = {"X-Access-Token": token, "Content-Type": "application/json;charset=UTF-8"}
         r = req.get(host + '/material/getMaxBarCode', headers=headers)
         max_bc = r.json()['data']['barCode']
         bc = str(int(max_bc) + 1)
-        fp = FILE_PATH['EXTRACT']
-        existing = {}
-        if os.path.exists(fp):
-            with open(fp, 'r', encoding='utf-8') as f:
-                existing = yaml.safe_load(f) or {}
-        existing['barCode'] = bc
-        with open(fp, 'w', encoding='utf-8') as f:
-            yaml.dump(existing, f, allow_unicode=True, sort_keys=False)
+        context.set('barCode', bc)
         return bc

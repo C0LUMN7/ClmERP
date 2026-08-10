@@ -70,7 +70,7 @@ def run_suite(test_type: str, suite: str) -> None:
 if __name__ == '__main__':
     import pytest
 
-    parser = argparse.ArgumentParser(description='ERP 自动化测试统一执行入口（P0 合并骨架）')
+    parser = argparse.ArgumentParser(description='ERP 自动化测试统一执行入口')
     parser.add_argument(
         'test_type',
         choices=['api', 'ui', 'preflight'],

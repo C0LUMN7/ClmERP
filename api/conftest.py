@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
-"""P0: API 测试 conftest（从 testcase/conftest.py 迁移）
+"""API 测试 conftest
 
 - start_test_and_end: 用例级日志标记
-- system_login: session 级自动登录，提取 Token 写入 extract.yaml
+- api_run_context: session 级运行上下文，替代全局 extract.yaml（收集阶段不执行）
+- system_login: session 级自动登录，提取 Token 写入运行上下文
 - datadb_init: session 后置数据清理，防止 ERP 环境残留脏数据
 
 fixture 仅对 api/ 目录下用例生效；pytest 收集阶段不执行任何 fixture，
 因此 collect-only 不会触发自动登录和数据库清理。
 """
 import time
+
 import pytest
 import allure
-from common.readyaml import get_testcase_yaml
-from base.apiutil import RequestBase
+
 from common.recordlog import logs
 from common.debugtalk import DebugTalk
 from common.connection import ConnectMysql
+from api.framework.yaml_loader import load_case_pairs, reset_run_context
+from api.framework.runner import run_case
 
 
 @pytest.fixture(autouse=True)
@@ -26,16 +29,23 @@ def start_test_and_end():
 
 
 @pytest.fixture(scope='session', autouse=True)
+def api_run_context():
+    """每次测试会话独立的运行上下文：替代全局 extract.yaml，避免并发和失败重跑相互污染"""
+    context = reset_run_context()
+    yield context
+
+
+@pytest.fixture(scope='session', autouse=True)
 @allure.story("登录")
-def system_login():
+def system_login(api_run_context):
     max_retries = 5
     for attempt in range(max_retries):
         try:
             if attempt > 0:
                 DebugTalk._captcha_data = None
                 time.sleep(1)
-            api_info = get_testcase_yaml('./api/login.yaml')
-            RequestBase().specification_yaml(api_info[0][0], api_info[0][1])
+            base_info, testcase = load_case_pairs('./api/login.yaml')[0]
+            run_case(base_info, testcase, yaml_file='./api/login.yaml')
             return
         except Exception as e:
             logs.error(f'登录接口异常 (第{attempt+1}次/共{max_retries}次): {e}')

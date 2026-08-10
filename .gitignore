@@ -32,7 +32,7 @@ environment.xml/
 /*.pdf
 extracted_images/
 
-# ---- P0 合并骨架新增 ----
+# ---- 合并骨架新增 ----
 # 统一报告与运行产物（reports/ 保留说明文件，其余全部忽略）
 reports/*
 !reports/README.md
