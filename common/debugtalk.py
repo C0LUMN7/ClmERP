@@ -122,6 +122,48 @@ class DebugTalk:
             raise RuntimeError('登录密码未配置：请通过环境变量 ERP_PASSWORD 提供测试密码，不要写入代码或 YAML')
         return self.md5_encryption(ERP_PASSWORD)
 
+    def get_business_id(self, key):
+        """读取配置的核心业务 ID（分类/仓库/供应商/客户/账户），避免散落在 YAML
+
+        值来自 config/settings.py（环境变量优先，缺省为 cloud_test 默认示例）；
+        数字值保持 int 类型，保证与原有 YAML 请求体语义一致。
+        """
+        from config.settings import BUSINESS_IDS
+        value = BUSINESS_IDS.get(key)
+        if not value:
+            raise RuntimeError(f'核心业务 ID 未配置: {key}，请通过 ERP_* 环境变量或 config/settings.py 配置')
+        if str(value).isdigit():
+            return int(value)
+        return value
+
+    def get_material_id_by_name(self, name_prefix):
+        """按本次创建的唯一商品名前缀精确查询商品 ID（数据库）
+
+        商品名 = 前缀 + 会话固定运行 ID；只匹配本次创建的商品，
+        避免更新/删除操作作用于环境中原有商品。
+        """
+        from common.connection import ConnectMysql
+        name = f'{name_prefix}{self.fixed_timestamp()}'
+        rows = ConnectMysql().query_all(
+            f"SELECT id FROM jsh_material WHERE name = '{name}' AND delete_flag = '0'")
+        if not rows:
+            raise RuntimeError(f'数据库未找到本次创建的商品: {name}，请确认创建步骤已执行且名称唯一')
+        return rows[0][0]
+
+    def get_depot_id_by_name(self, name_prefix):
+        """按本次创建的唯一仓库名前缀精确查询仓库 ID（数据库）
+
+        仓库名 = 前缀 + 会话固定运行 ID；只匹配本次创建的仓库，
+        更新、删除前必须使用本函数确认精确 ID，避免作用于真实仓库。
+        """
+        from common.connection import ConnectMysql
+        name = f'{name_prefix}{self.fixed_timestamp()}'
+        rows = ConnectMysql().query_all(
+            f"SELECT id FROM jsh_depot WHERE name = '{name}' AND delete_flag = '0'")
+        if not rows:
+            raise RuntimeError(f'数据库未找到本次创建的仓库: {name}，请确认创建步骤已执行且名称唯一')
+        return rows[0][0]
+
     def md5_encryption(self, params):
         """参数MD5加密"""
         enc_data = hashlib.md5()

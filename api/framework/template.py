@@ -12,6 +12,11 @@ from common.debugtalk import DebugTalk
 
 _EXPR_PATTERN = re.compile(r'\$\{([^}]*)\}')
 
+# 失败定位信息脱敏：命中以下字段名的提取变量值不展示真实内容
+_SENSITIVE_KEYS = ('token', 'password', 'loginname', 'x-access-token')
+# 直接返回凭据的模板函数，解析值一律不进入失败定位信息
+_SENSITIVE_FUNCS = ('get_login_name', 'get_login_password')
+
 
 class TemplateResolver:
     """解析 ${function(args)} 表达式，支持 str / dict / list 递归"""
@@ -43,9 +48,24 @@ class TemplateResolver:
                 break
             expression = match.group(1)
             value = self._call_expression(expression)
-            self.used.append((expression, str(value)[:40]))
+            self.used.append((expression, self._display_value(expression, value)))
             result = result[:match.start()] + str(value) + result[match.end():]
         return result
+
+    @staticmethod
+    def _display_value(expression, value):
+        """记录变量来源时脱敏敏感值：token/password 等不写入失败定位信息和报告附件
+
+        只影响展示副本，不影响 self.used 之外的任何逻辑。
+        """
+        func_name = expression.split('(')[0]
+        if func_name in _SENSITIVE_FUNCS:
+            return '***'
+        if func_name == 'get_extract_data':
+            arg = expression[expression.index('(') + 1:expression.index(')')].strip()
+            if arg.lower() in _SENSITIVE_KEYS:
+                return '***'
+        return str(value)[:40]
 
     def _call_expression(self, expression):
         """执行一个表达式，返回解析后的值"""

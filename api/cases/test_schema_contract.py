@@ -1,8 +1,8 @@
 """代表性稳定接口的 JSON Schema 契约校验示例
 
 仅覆盖 3 个稳定接口（登录、商品列表、采购单详情），不做全接口 Schema 覆盖。
-采购单详情校验复用采购业务场景中已创建的 BS_PO_ 采购入库单（smoke 套件中
-业务场景先于本文件执行，fixed_timestamp() 在同一会话返回相同时间戳）。
+采购单详情校验复用采购业务场景中已创建的 AUTO_API_BSPO_ 采购入库单（smoke
+套件中业务场景先于本文件执行，fixed_timestamp() 在同一会话返回相同时间戳）。
 """
 import allure
 import pytest
@@ -32,7 +32,7 @@ class TestSchemaContract:
 
     @allure.story('采购单详情接口 Schema')
     def test_purchase_detail_schema(self):
-        """依赖当前会话中采购业务场景已创建 BS_PO_ 采购入库单"""
+        """依赖当前会话中采购业务场景已创建 AUTO_API_BSPO_ 采购入库单"""
         allure.dynamic.title('采购单详情接口响应符合 JSON Schema')
         steps = load_case_pairs('./api/cases/scenarios/PurchaseScenario.yml')
         query_step = None

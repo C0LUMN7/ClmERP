@@ -42,28 +42,38 @@ def system_login():
 @pytest.fixture(scope='session', autouse=True)
 def datadb_init():
     """
-    后置处理器，比如测试之后的数据清理
-    数据库可以预先预置一批本次测试的数据，在测试完成之后将这批数据清理，就不会对系统造成影响，也不会产生脏数据
-    :return:
+    后置定向清理：只清理本次会话创建且带 AUTO_API_ 前缀与本次运行 ID 的测试数据。
+
+    单据按单号前缀 + 运行 ID 匹配，商品/仓库按名称前缀 + 运行 ID 匹配，
+    不模糊删除共享环境中的历史数据；本次创建数据的精确业务 ID 优先在用例内
+    通过创建响应/数据库精确查询获取，这里只作为失败重跑后的兜底清理。
     """
     yield
+    run_id = DebugTalk.fixed_timestamp()
     conn = ConnectMysql()
     try:
         cursor = conn.cursor
-        bill_prefixes = ("PO_", "SO_", "FK_", "SK_", "BS_", "EX_")
-        for p in bill_prefixes:
-            cursor.execute(f"DELETE FROM jsh_account_item WHERE bill_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
-            cursor.execute(f"DELETE FROM jsh_account_item WHERE header_id IN (SELECT id FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0')")
-            cursor.execute(f"DELETE FROM jsh_depot_item WHERE header_id IN (SELECT id FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0')")
-            cursor.execute(f"DELETE FROM jsh_account_head WHERE bill_no LIKE '{p}%' AND delete_flag = '0'")
-            cursor.execute(f"DELETE FROM jsh_depot_head WHERE number LIKE '{p}%' AND delete_flag = '0'")
-        material_prefixes = ("电动牙刷_", "洗面奶_", "EX_")
-        for p in material_prefixes:
-            cursor.execute(f"DELETE FROM jsh_material_current_stock WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")
-            cursor.execute(f"DELETE FROM jsh_material_extend WHERE material_id IN (SELECT id FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0')")
-            cursor.execute(f"DELETE FROM jsh_material WHERE name LIKE '{p}%' AND delete_flag = '0'")
+        head_ids = (f"SELECT id FROM jsh_depot_head WHERE number LIKE 'AUTO_API_%' "
+                    f"AND number LIKE '%{run_id}%' AND delete_flag = '0'")
+        account_ids = (f"SELECT id FROM jsh_account_head WHERE bill_no LIKE 'AUTO_API_%' "
+                       f"AND bill_no LIKE '%{run_id}%' AND delete_flag = '0'")
+        material_ids = (f"SELECT id FROM jsh_material WHERE name LIKE 'AUTO_API_%' "
+                        f"AND name LIKE '%{run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_account_item WHERE bill_id IN ({head_ids})")
+        cursor.execute(f"DELETE FROM jsh_account_item WHERE header_id IN ({account_ids})")
+        cursor.execute(f"DELETE FROM jsh_depot_item WHERE header_id IN ({head_ids})")
+        cursor.execute(f"DELETE FROM jsh_account_head WHERE bill_no LIKE 'AUTO_API_%' "
+                       f"AND bill_no LIKE '%{run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_depot_head WHERE number LIKE 'AUTO_API_%' "
+                       f"AND number LIKE '%{run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_material_current_stock WHERE material_id IN ({material_ids})")
+        cursor.execute(f"DELETE FROM jsh_material_extend WHERE material_id IN ({material_ids})")
+        cursor.execute(f"DELETE FROM jsh_material WHERE name LIKE 'AUTO_API_%' "
+                       f"AND name LIKE '%{run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_depot WHERE name LIKE 'AUTO_API_DEPOT_%' "
+                       f"AND name LIKE '%{run_id}%' AND delete_flag = '0'")
         conn.conn.commit()
-        logs.info("后置数据清理完成")
+        logs.info("后置定向清理完成（AUTO_API_ 前缀 + 本次运行 ID）")
     except Exception as e:
         logs.warning(f"后置数据清理异常: {e}")
     finally:

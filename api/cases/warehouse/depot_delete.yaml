@@ -6,8 +6,8 @@
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 删除仓库（自动化测试专属仓库2）
+    - case_name: 删除本次创建的测试仓库（更新后的唯一名称精确查询ID）
       params:
-        id: ${get_extract_data(depotId)}
+        id: ${get_depot_id_by_name(AUTO_API_DEPOT_UPDATE_)}
       validation:
         - contains: { 'code': 200, 'message': '成功' }

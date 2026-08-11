@@ -8,7 +8,7 @@
   testCase:
     - case_name: 按编号查询-提取出库单ID供审核
       params:
-        number: SO_${fixed_timestamp()}
+        number: AUTO_API_SO_${fixed_timestamp()}
       extract:
         saleId: $.data.id
         saleOrganId: $.data.organId

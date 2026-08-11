@@ -2,18 +2,18 @@ import allure
 import pytest
 import requests
 import urllib3
-import time
 
 urllib3.disable_warnings()
 
 from api.framework.yaml_loader import load_case_pairs
 from api.framework.runner import run_case
 from common.connection import ConnectMysql
+from common.debugtalk import DebugTalk
 from base.generateId import m_id, c_id
 from config.settings import get_api_url
 
 
-@pytest.mark.exception
+@pytest.mark.negative
 @allure.feature(next(m_id) + 'ERP异常场景测试')
 class TestExceptionScenario:
 
@@ -25,13 +25,14 @@ class TestExceptionScenario:
     def test_auth_token_empty(self):
         """Token为空访问写接口，不应写入成功"""
         host = get_api_url()
-        order_no = f"EX_AUTH_{int(time.time() * 1000)}"
+        dt = DebugTalk()
+        order_no = f"AUTO_API_EX_AUTH_{dt.fixed_timestamp()}_EMPTY"
 
         allure.dynamic.title("Token为空-新增销售出库单")
         resp = requests.post(f"{host}/depotHead/addDepotHeadAndDetail",
             headers={"Content-Type": "application/json;charset=UTF-8"},
             json={
-                "info": f'{{"number":"{order_no}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"2026-06-17 12:00:00","status":"0"}}',
+                "info": f'{{"number":"{order_no}","type":"出库","subType":"销售","organId":{dt.get_business_id("customer_organ_id")},"accountId":{dt.get_business_id("settle_account_id")},"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"2026-06-17 12:00:00","status":"0"}}',
                 "rows": "[]"
             },
             verify=False, timeout=10)
@@ -56,7 +57,8 @@ class TestExceptionScenario:
     def test_auth_token_invalid(self):
         """Token无效访问写接口，不应写入成功"""
         host = get_api_url()
-        order_no = f"EX_AUTH_{int(time.time() * 1000)}"
+        dt = DebugTalk()
+        order_no = f"AUTO_API_EX_AUTH_{dt.fixed_timestamp()}_INVALID"
 
         allure.dynamic.title("Token无效-新增销售出库单")
         resp = requests.post(f"{host}/depotHead/addDepotHeadAndDetail",
@@ -65,7 +67,7 @@ class TestExceptionScenario:
                 "X-Access-Token": "invalid_token"
             },
             json={
-                "info": f'{{"number":"{order_no}","type":"出库","subType":"销售","organId":204,"accountId":86,"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"2026-06-17 12:00:00","status":"0"}}',
+                "info": f'{{"number":"{order_no}","type":"出库","subType":"销售","organId":{dt.get_business_id("customer_organ_id")},"accountId":{dt.get_business_id("settle_account_id")},"totalPrice":29,"changeAmount":0,"debt":29,"discount":0,"discountMoney":0,"discountLastMoney":29,"otherMoney":0,"operTime":"2026-06-17 12:00:00","status":"0"}}',
                 "rows": "[]"
             },
             verify=False, timeout=10)

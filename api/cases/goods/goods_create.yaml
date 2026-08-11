@@ -6,12 +6,12 @@
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 正常新增商品（带库存和价格）
+    - case_name: 正常新增商品（带库存和价格，使用 AUTO_API_GOODS_ 前缀）
       json:
-        name: 电动牙刷_${fixed_timestamp()}
+        name: AUTO_API_GOODS_${fixed_timestamp()}
         brand: 笑容加
         mnemonic: ddys
-        categoryId: 91
+        categoryId: ${get_business_id(category_id)}
         unit: 支
         meList:
           - barCode: "${gen_bar_code()}"
@@ -21,7 +21,8 @@
             wholesaleDecimal: "299"
             lowDecimal: "259"
         stock:
-          - id: "124"
+          # 仓库 ID 来自配置（cloud_test 默认示例 124），仓库名对应配置的默认仓库
+          - id: "${get_business_id(depot_id)}"
             name: "自动化测试专属仓库3"
             initStock: "100"
             lowSafeStock: "1"
@@ -29,4 +30,4 @@
       validation:
         - contains: { 'message': '成功' }
         - eq: { 'code': 200 }
-        - db: "SELECT id FROM jsh_material WHERE name = '电动牙刷_${fixed_timestamp()}' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"
+        - db: "SELECT id FROM jsh_material WHERE name = 'AUTO_API_GOODS_${fixed_timestamp()}' AND brand = '笑容加' AND mnemonic = 'ddys' AND delete_flag = '0'"

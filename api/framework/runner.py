@@ -21,13 +21,20 @@ import requests
 
 from common.debugtalk import DebugTalk
 from common.recordlog import logs
-from common.sendrequest import SendRequest
+from common.sendrequest import SendRequest, _mask_response_text, _mask_sensitive, _SENSITIVE_KEYS
 from config.settings import ERP_PASSWORD, ERP_USERNAME, get_api_url
 from api.framework.assertions import Assertions
 from api.framework.template import TemplateResolver
 from api.framework.yaml_loader import get_run_context
 
 _EXTRACT_PATTERNS = ['(.+?)', '(.*?)', r'(\d+)', r'(\d*)']
+
+
+def _mask_extract_log(key, value):
+    """提取变量日志脱敏：token/password/loginName 等敏感字段只展示 ***，上下文仍保存原值"""
+    if str(key).lower() in _SENSITIVE_KEYS:
+        return '***'
+    return value
 
 
 class ApiRunner:
@@ -80,7 +87,8 @@ class ApiRunner:
         self.template.used = []
 
         header = self.template.resolve(base.get('header') or {})
-        allure.attach(str(header), '请求头信息', allure.attachment_type.TEXT)
+        # 附件仅展示脱敏副本（X-Access-Token 等不写入报告），实际请求不受影响
+        allure.attach(str(_mask_sensitive(header)), '请求头信息', allure.attachment_type.TEXT)
         cookies = None
         if base.get('cookies') is not None:
             cookies = json.loads(self.template.resolve(base['cookies']))
@@ -104,7 +112,8 @@ class ApiRunner:
 
         status_code = res.status_code
         res_text = res.text
-        allure.attach(res_text, '接口响应信息', allure.attachment_type.TEXT)
+        # 附件仅展示脱敏副本（登录响应含 token），提取与断言仍使用原始文本
+        allure.attach(_mask_response_text(res_text), '接口响应信息', allure.attachment_type.TEXT)
         res_json = self._parse_response(res_text, api_name, url, case_name, method, header, cookies, files,
                                         request_params)
 
@@ -146,7 +155,7 @@ class ApiRunner:
                 header['X-Access-Token'] = self._relogin()
                 res = self.send.run_main(name=api_name, url=url, case_name=case_name, header=header,
                                          method=method, cookies=cookies, file=files, **request_params)
-                allure.attach(res.text, '接口响应信息', allure.attachment_type.TEXT)
+                allure.attach(_mask_response_text(res.text), '接口响应信息', allure.attachment_type.TEXT)
                 return json.loads(res.text)
             raise RuntimeError(f'接口响应不是合法 JSON，响应内容: {res_text[:200]}')
 
@@ -167,14 +176,14 @@ class ApiRunner:
                         continue
                     extracted = int(match.group(1)) if pattern in (r'(\d+)', r'(\d*)') else match.group(1)
                     self.context.set(key, extracted)
-                    logs.info('提取变量 %s=%s（正则）', key, extracted)
+                    logs.info('提取变量 %s=%s（正则）', key, _mask_extract_log(key, extracted))
             if '$' in value:
                 if response_json is None:
                     response_json = json.loads(response_text)
                 values = jsonpath.jsonpath(response_json, value)
                 extracted = values[0] if values else '未提取到数据，该接口返回结果可能为空'
                 self.context.set(key, extracted)
-                logs.info('提取变量 %s=%s（JSONPath）', key, extracted)
+                logs.info('提取变量 %s=%s（JSONPath）', key, _mask_extract_log(key, extracted))
 
     def _extract_data_list(self, extract_map, response_text):
         """提取多个变量为列表（支持正则和 JSONPath），写入运行上下文"""
@@ -184,14 +193,14 @@ class ApiRunner:
                 matches = re.findall(value, response_text, re.S)
                 if matches:
                     self.context.set(key, matches)
-                    logs.info('提取列表 %s=%s（正则）', key, matches)
+                    logs.info('提取列表 %s=%s（正则）', key, _mask_extract_log(key, matches))
             if '$' in value:
                 if response_json is None:
                     response_json = json.loads(response_text)
                 values = jsonpath.jsonpath(response_json, value)
                 extracted = values if values else '未提取到数据，该接口返回结果可能为空'
                 self.context.set(key, extracted)
-                logs.info('提取列表 %s=%s（JSONPath）', key, extracted)
+                logs.info('提取列表 %s=%s（JSONPath）', key, _mask_extract_log(key, extracted))
 
     def _relogin(self):
         """Token 过期后重新登录（凭据来自 config/settings.py 环境变量）"""
@@ -220,7 +229,7 @@ class ApiRunner:
                         self.context.set('token', new_token)
                         logs.info('重新登录成功（第%s次）', attempt + 1)
                         return new_token
-                    logs.warning('登录返回无 token（第%s次）: %s', attempt + 1, data)
+                    logs.warning('登录返回无 token（第%s次）: %s', attempt + 1, _mask_sensitive(data))
                 else:
                     logs.warning('登录状态码异常（第%s次）: %s', attempt + 1, r.status_code)
             except Exception as e:

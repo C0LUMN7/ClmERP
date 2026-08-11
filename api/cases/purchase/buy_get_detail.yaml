@@ -8,7 +8,7 @@
   testCase:
     - case_name: 按编号查询-提取入库单ID供后续使用
       params:
-        number: PO_${fixed_timestamp()}
+        number: AUTO_API_PO_${fixed_timestamp()}
       extract:
         buyId: $.data.id
         buyOrganId: $.data.organId

@@ -6,9 +6,9 @@
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 更新仓库名称
+    - case_name: 更新本次创建的仓库名称（按唯一仓库名精确查询ID）
       json:
-        id: ${get_extract_data(depotId)}
-        name: 自动化测试专属仓库2
+        id: ${get_depot_id_by_name(AUTO_API_DEPOT_)}
+        name: AUTO_API_DEPOT_UPDATE_${fixed_timestamp()}
       validation:
         - contains: { 'code': 200, 'message': '成功' }

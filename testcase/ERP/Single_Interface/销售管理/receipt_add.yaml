@@ -8,9 +8,9 @@
   testCase:
     - case_name: 对销售出库单新增收款单
       json:
-        info: '{"organId":${get_extract_data(saleOrganId)},"billTime":"${end_time()}","billNo":"SK_${fixed_timestamp()}","accountId":105,"totalPrice":${get_extract_data(saleDebt)},"discountMoney":0,"changeAmount":${get_extract_data(saleDebt)},"type":"收款","status":"0"}'
+        info: '{"organId":${get_extract_data(saleOrganId)},"billTime":"${end_time()}","billNo":"AUTO_API_SK_${fixed_timestamp()}","accountId":${get_business_id(finance_account_id)},"totalPrice":${get_extract_data(saleDebt)},"discountMoney":0,"changeAmount":${get_extract_data(saleDebt)},"type":"收款","status":"0"}'
         rows: '[{"id":"${get_extract_data(saleId)}","billNumber":"${get_extract_data(saleNumber)}","needDebt":"${get_extract_data(saleDebt)}","finishDebt":"0","eachAmount":"${get_extract_data(saleDebt)}","remark":""}]'
       validation:
         - contains: { 'code': 200 , 'msg': '操作成功'}
-        - db: "SELECT id FROM jsh_account_head WHERE bill_no = 'SK_${fixed_timestamp()}' AND total_price = ${get_extract_data(saleDebt)} AND delete_flag = '0'"
+        - db: "SELECT id FROM jsh_account_head WHERE bill_no = 'AUTO_API_SK_${fixed_timestamp()}' AND total_price = ${get_extract_data(saleDebt)} AND delete_flag = '0'"
         - db: "SELECT id FROM jsh_account_item WHERE bill_id = ${get_extract_data(saleId)} AND need_debt - each_amount = 0"

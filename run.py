@@ -11,6 +11,17 @@ def _is_ci() -> bool:
     return any(os.getenv(var, '').lower() == 'true' for var in ci_vars)
 
 
+# suite 到 pytest marker 的映射；negative 为异常场景的标准套件名，
+# exception 保留作为旧命令别名（现有用例标记统一使用 negative）
+SUITE_MARKERS = {
+    'smoke': 'smoke',
+    'single': 'single',
+    'business': 'business',
+    'negative': 'negative',
+    'exception': 'negative',
+}
+
+
 def _build_pytest_args(test_type: str, suite: str) -> list[str]:
     """按测试类型构建 pytest 参数：api/ui 使用各自用例目录和 Allure 结果目录"""
     if test_type == 'api':
@@ -21,10 +32,11 @@ def _build_pytest_args(test_type: str, suite: str) -> list[str]:
         alluredir = './reports/allure-results/ui'
 
     args = ['-s', '-v']
-    if suite == 'all':
-        args.append(target)
+    marker = SUITE_MARKERS.get(suite)
+    if marker:
+        args.extend(['-m', marker, target])
     else:
-        args.extend(['-m', suite, target])
+        args.append(target)
     args.extend([
         f'--alluredir={alluredir}',
         f'--junitxml=./reports/{test_type}_results.xml',
@@ -78,9 +90,9 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--suite',
-        choices=['smoke', 'single', 'business', 'exception', 'all'],
+        choices=['smoke', 'single', 'business', 'negative', 'exception', 'all'],
         default='all',
-        help='回归范围: smoke(冒烟) / single(单接口) / business(业务链路) / exception(异常场景) / all(全量)',
+        help='回归范围: smoke(冒烟) / single(单接口) / business(业务链路) / negative(异常场景) / all(全量)；exception 为 negative 的旧命令别名',
     )
     args = parser.parse_args()
 

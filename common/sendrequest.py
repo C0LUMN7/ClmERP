@@ -10,6 +10,35 @@ from common.recordlog import logs
 from requests import utils
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+# 日志/Allure 附件脱敏：命中以下字段名的值一律不展示真实内容
+_SENSITIVE_KEYS = ('loginname', 'password', 'token', 'x-access-token')
+
+
+def _mask_sensitive(data, mask='***'):
+    """递归脱敏敏感字段（loginName/password/token/X-Access-Token 等）
+
+    只影响日志与 Allure 附件的展示副本，不影响实际请求内容。
+    """
+    if isinstance(data, dict):
+        return {
+            key: (mask if str(key).lower() in _SENSITIVE_KEYS else _mask_sensitive(value))
+            for key, value in data.items()
+        }
+    if isinstance(data, list):
+        return [_mask_sensitive(item) for item in data]
+    return data
+
+
+def _mask_response_text(text):
+    """脱敏响应 JSON 文本中的敏感字段（登录响应包含 token），非 JSON 原样返回"""
+    if not text:
+        return text
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return text
+    return json.dumps(_mask_sensitive(data), ensure_ascii=False)
+
 
 class SendRequest:
     """发送接口请求，暂时只写了get和post方法的请求"""
@@ -123,7 +152,7 @@ class SendRequest:
                     new_token = data.get('data', {}).get('token')
                     if new_token:
                         self._write_context({'token': new_token})
-                        logs.info(f'[send_request] 重新登录成功，新token: {new_token}')
+                        logs.info('[send_request] 重新登录成功，新token已写入运行上下文，不在日志中展示')
                         return new_token
             except Exception as e:
                 logs.warning(f'[send_request] 登录异常 (第{attempt+1}次): {e}')
@@ -140,8 +169,8 @@ class SendRequest:
             if set_cookie:
                 cookie['Cookie'] = set_cookie
                 self._write_context(cookie)
-                logs.info("cookie：%s" % cookie)
-            logs.info("接口返回信息：%s" % result.text if result.text else result)
+                logs.info("cookie：%s" % {k: '***' for k in cookie})
+            logs.info("接口返回信息：%s" % _mask_response_text(result.text) if result.text else result)
 
             # 自动重新登录：检测到loginOut时循环重试（最多3次）
             max_relogin_retries = 3
@@ -153,7 +182,7 @@ class SendRequest:
                         if 'headers' in kwargs:
                             kwargs['headers']['X-Access-Token'] = new_token
                         result = session.request(**kwargs)
-                        logs.info("接口返回信息(重试)：%s" % result.text if result.text else result)
+                        logs.info("接口返回信息(重试)：%s" % _mask_response_text(result.text) if result.text else result)
                     else:
                         break
                 else:
@@ -189,18 +218,18 @@ class SendRequest:
             logs.info('请求地址：%s' % url)
             logs.info('请求方式：%s' % method)
             logs.info('测试用例名称：%s' % case_name)
-            logs.info('请求头：%s' % header)
-            logs.info('Cookie：%s' % cookies)
-            req_params = json.dumps(kwargs, ensure_ascii=False)
+            logs.info('请求头：%s' % _mask_sensitive(header))
+            logs.info('Cookie：%s' % ({k: '***' for k in cookies} if cookies else cookies))
+            req_params = json.dumps(_mask_sensitive(kwargs), ensure_ascii=False)
             if "data" in kwargs.keys():
                 allure.attach(req_params, '请求参数', allure.attachment_type.TEXT)
-                logs.info("请求参数：%s" % kwargs)
+                logs.info("请求参数：%s" % _mask_sensitive(kwargs))
             elif "json" in kwargs.keys():
                 allure.attach(req_params, '请求参数', allure.attachment_type.TEXT)
-                logs.info("请求参数：%s" % kwargs)
+                logs.info("请求参数：%s" % _mask_sensitive(kwargs))
             elif "params" in kwargs.keys():
                 allure.attach(req_params, '请求参数', allure.attachment_type.TEXT)
-                logs.info("请求参数：%s" % kwargs)
+                logs.info("请求参数：%s" % _mask_sensitive(kwargs))
         except Exception as e:
             logs.error(e)
         # time.sleep(0.5)

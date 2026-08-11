@@ -31,12 +31,28 @@ MYSQL_USERNAME = os.getenv('MYSQL_USERNAME', '')
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
 MYSQL_DATABASE = os.getenv('MYSQL_DATABASE', '')
 
-# 核心业务 ID 配置占位（商品分类/仓库/供应商/客户/账户，当前环境值待确认）
+# 核心业务 ID（商品分类/仓库/供应商/客户/结算账户/财务账户）
+# 优先通过环境变量注入；未设置时使用当前 cloud_test 环境的默认示例值，
+# 切换环境或业务 ID 失效时需重新确认映射，不要再写回 YAML 用例。
+_BUSINESS_ID_DEFAULTS = {
+    'category_id': '91',
+    'depot_id': '124',
+    'supplier_organ_id': '196',
+    'customer_organ_id': '204',
+    'settle_account_id': '86',
+    'finance_account_id': '105',
+}
+_BUSINESS_ID_ENV_VARS = {
+    'category_id': 'ERP_CATEGORY_ID',
+    'depot_id': 'ERP_DEPOT_ID',
+    'supplier_organ_id': 'ERP_SUPPLIER_ORGAN_ID',
+    'customer_organ_id': 'ERP_CUSTOMER_ORGAN_ID',
+    'settle_account_id': 'ERP_SETTLE_ACCOUNT_ID',
+    'finance_account_id': 'ERP_FINANCE_ACCOUNT_ID',
+}
 BUSINESS_IDS = {
-    'category_id': os.getenv('ERP_CATEGORY_ID', ''),
-    'depot_id': os.getenv('ERP_DEPOT_ID', ''),
-    'organ_id': os.getenv('ERP_ORGAN_ID', ''),
-    'account_id': os.getenv('ERP_ACCOUNT_ID', ''),
+    key: os.getenv(_BUSINESS_ID_ENV_VARS[key], default)
+    for key, default in _BUSINESS_ID_DEFAULTS.items()
 }
 
 
@@ -72,9 +88,13 @@ def preflight():
         all_ok = all_ok and ok
 
     missing_ids = [k for k, v in BUSINESS_IDS.items() if not v]
-    print(f'  [{"已配置" if not missing_ids else "待配置"}] 核心业务 ID'
+    print('  [已配置] 核心业务 ID: '
+          + ', '.join(f'{k}={v}' for k, v in BUSINESS_IDS.items())
           + (f'（缺失: {", ".join(missing_ids)}）' if missing_ids else ''))
     all_ok = all_ok and not missing_ids
+    used_defaults = [k for k in BUSINESS_IDS if not os.getenv(_BUSINESS_ID_ENV_VARS[k])]
+    if used_defaults:
+        print(f'  提示: {", ".join(used_defaults)} 使用 cloud_test 默认示例值，可通过对应 ERP_* 环境变量覆盖')
 
     print('结论: ' + ('预检通过' if all_ok else '存在待配置项，连接真实环境前请先补齐'))
     return all_ok

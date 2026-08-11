@@ -6,9 +6,9 @@
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 更新商品品牌
+    - case_name: 更新本次创建的商品品牌（按唯一商品名精确查询ID）
       json:
-        id: ${get_extract_data(goodsId)}
+        id: ${get_material_id_by_name(AUTO_API_GOODS_)}
         brand: 飞利浦
       validation:
         - contains: { 'code': 200, 'message': '成功' }

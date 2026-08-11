@@ -6,9 +6,9 @@
       Content-Type: application/json;charset=UTF-8
       X-Access-Token: ${get_extract_data(token)}
   testCase:
-    - case_name: 正常新增仓库
+    - case_name: 正常新增仓库（名称带 AUTO_API_DEPOT_ 前缀和运行ID，避免重名）
       json:
-        name: 自动化测试专属仓库1
+        name: AUTO_API_DEPOT_${fixed_timestamp()}
       validation:
         - contains: { 'code': 200, 'message': '成功' }
-        - db: "SELECT id FROM jsh_depot WHERE name = '自动化测试专属仓库1' AND delete_Flag = '0'"
+        - db: "SELECT id FROM jsh_depot WHERE name = 'AUTO_API_DEPOT_${fixed_timestamp()}' AND delete_flag = '0'"

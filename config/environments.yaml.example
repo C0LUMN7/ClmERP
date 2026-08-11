@@ -22,10 +22,12 @@ environments:
       username: ${ERP_USERNAME}
       password: ${ERP_PASSWORD}
     business_ids:
-      category_id: ${ERP_CATEGORY_ID}
-      depot_id: ${ERP_DEPOT_ID}
-      organ_id: ${ERP_ORGAN_ID}
-      account_id: ${ERP_ACCOUNT_ID}
+      category_id: ${ERP_CATEGORY_ID}          # 商品分类 ID（cloud_test 默认示例 91）
+      depot_id: ${ERP_DEPOT_ID}                # 默认仓库 ID（cloud_test 默认示例 124）
+      supplier_organ_id: ${ERP_SUPPLIER_ORGAN_ID}  # 供应商（cloud_test 默认示例 196）
+      customer_organ_id: ${ERP_CUSTOMER_ORGAN_ID}  # 客户（cloud_test 默认示例 204）
+      settle_account_id: ${ERP_SETTLE_ACCOUNT_ID}  # 单据结算账户（cloud_test 默认示例 86）
+      finance_account_id: ${ERP_FINANCE_ACCOUNT_ID}  # 收付款财务账户（cloud_test 默认示例 105）
 
   local:
     # 与 cloud_test 使用同一组环境变量；本地环境请覆盖 ERP_* / MYSQL_* 环境变量
@@ -43,5 +45,7 @@ environments:
     business_ids:
       category_id: ${ERP_CATEGORY_ID}
       depot_id: ${ERP_DEPOT_ID}
-      organ_id: ${ERP_ORGAN_ID}
-      account_id: ${ERP_ACCOUNT_ID}
+      supplier_organ_id: ${ERP_SUPPLIER_ORGAN_ID}
+      customer_organ_id: ${ERP_CUSTOMER_ORGAN_ID}
+      settle_account_id: ${ERP_SETTLE_ACCOUNT_ID}
+      finance_account_id: ${ERP_FINANCE_ACCOUNT_ID}
