@@ -153,11 +153,12 @@ class DebugTalk:
     def get_depot_id_by_name(self, name_prefix):
         """按本次创建的唯一仓库名前缀精确查询仓库 ID（数据库）
 
-        仓库名 = 前缀 + 会话固定运行 ID；只匹配本次创建的仓库，
+        仓库名 = 前缀 + 会话运行 ID；只匹配本次创建的仓库，
         更新、删除前必须使用本函数确认精确 ID，避免作用于真实仓库。
         """
         from common.connection import ConnectMysql
-        name = f'{name_prefix}{self.fixed_timestamp()}'
+        run_id = self.short_run_id() if name_prefix in ('AUTO_API_D_', 'AUTO_API_U_') else self.fixed_timestamp()
+        name = f'{name_prefix}{run_id}'
         rows = ConnectMysql().query_all(
             f"SELECT id FROM jsh_depot WHERE name = '{name}' AND delete_flag = '0'")
         if not rows:
@@ -313,6 +314,16 @@ class DebugTalk:
         if DebugTalk._fixed_ts is None:
             DebugTalk._fixed_ts = str(int(time.time() * 1000))
         return DebugTalk._fixed_ts
+
+    def short_run_id(self):
+        """仓库名称字段较短，使用同一运行时间戳的 base36 短运行 ID"""
+        value = int(self.fixed_timestamp())
+        chars = '0123456789abcdefghijklmnopqrstuvwxyz'
+        result = ''
+        while value:
+            value, remainder = divmod(value, 36)
+            result = chars[remainder] + result
+        return result or '0'
 
     def gen_bar_code(self):
         """生成唯一条码并写入运行上下文，供后续 depotHead 使用

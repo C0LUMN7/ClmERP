@@ -49,7 +49,9 @@ def datadb_init():
     通过创建响应/数据库精确查询获取，这里只作为失败重跑后的兜底清理。
     """
     yield
-    run_id = DebugTalk.fixed_timestamp()
+    dt = DebugTalk()
+    run_id = dt.fixed_timestamp()
+    depot_run_id = dt.short_run_id()
     conn = ConnectMysql()
     try:
         cursor = conn.cursor
@@ -70,8 +72,10 @@ def datadb_init():
         cursor.execute(f"DELETE FROM jsh_material_extend WHERE material_id IN ({material_ids})")
         cursor.execute(f"DELETE FROM jsh_material WHERE name LIKE 'AUTO_API_%' "
                        f"AND name LIKE '%{run_id}%' AND delete_flag = '0'")
-        cursor.execute(f"DELETE FROM jsh_depot WHERE name LIKE 'AUTO_API_DEPOT_%' "
-                       f"AND name LIKE '%{run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_depot WHERE name LIKE 'AUTO_API_D_%' "
+                       f"AND name LIKE '%{depot_run_id}%' AND delete_flag = '0'")
+        cursor.execute(f"DELETE FROM jsh_depot WHERE name LIKE 'AUTO_API_U_%' "
+                       f"AND name LIKE '%{depot_run_id}%' AND delete_flag = '0'")
         conn.conn.commit()
         logs.info("后置定向清理完成（AUTO_API_ 前缀 + 本次运行 ID）")
     except Exception as e:

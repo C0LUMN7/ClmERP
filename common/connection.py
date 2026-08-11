@@ -1,10 +1,20 @@
 import traceback
 
 import pymysql
-from conf.operationConfig import OperationConfig
 from common.recordlog import logs
 
-conf = OperationConfig()
+
+def _mysql_option(option):
+    """MySQL 配置由 config/settings.py 统一读取：环境变量优先，config/local.ini 兜底。"""
+    from config import settings
+    values = {
+        'host': settings.MYSQL_HOST,
+        'port': settings.MYSQL_PORT,
+        'username': settings.MYSQL_USERNAME,
+        'password': settings.MYSQL_PASSWORD,
+        'database': settings.MYSQL_DATABASE,
+    }
+    return values[option]
 
 
 class ConnectMysql:
@@ -14,11 +24,11 @@ class ConnectMysql:
         self.cursor = None
 
         mysql_conf = {
-            'host': conf.get_section_mysql('host'),
-            'port': int(conf.get_section_mysql('port')),
-            'user': conf.get_section_mysql('username'),
-            'password': conf.get_section_mysql('password'),
-            'database': conf.get_section_mysql('database')
+            'host': _mysql_option('host'),
+            'port': int(_mysql_option('port')),
+            'user': _mysql_option('username'),
+            'password': _mysql_option('password'),
+            'database': _mysql_option('database')
         }
 
         try:
@@ -34,9 +44,17 @@ class ConnectMysql:
 
     def close(self):
         if self.cursor:
-            self.cursor.close()
+            try:
+                self.cursor.close()
+            except Exception:
+                pass
+            self.cursor = None
         if self.conn:
-            self.conn.close()
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            self.conn = None
         return True
 
     def query_all(self, sql):

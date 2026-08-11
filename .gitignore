@@ -47,6 +47,7 @@ playwright-report/
 
 # 本地环境配置（真实凭据，禁止提交，仅提交 example 模板）
 config/environments.yaml
+config/local.ini
 
 # 运行期日志产物（兼容旧反斜杠路径遗留的根目录日志文件，如 logs\test.20260810.log）
 logs\*.log

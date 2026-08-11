@@ -8,7 +8,7 @@
   testCase:
     - case_name: 更新本次创建的仓库名称（按唯一仓库名精确查询ID）
       json:
-        id: ${get_depot_id_by_name(AUTO_API_DEPOT_)}
-        name: AUTO_API_DEPOT_UPDATE_${fixed_timestamp()}
+        id: ${get_depot_id_by_name(AUTO_API_D_)}
+        name: AUTO_API_U_${short_run_id()}
       validation:
         - contains: { 'code': 200, 'message': '成功' }

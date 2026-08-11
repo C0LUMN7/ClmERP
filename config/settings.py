@@ -1,35 +1,69 @@
 # -*- coding: utf-8 -*-
 """统一配置读取（最小多环境：cloud_test / local）
 
-- 环境选择：ERP_ENV=cloud_test|local，默认 cloud_test
-- 敏感凭据一律通过环境变量或本地未提交配置注入，本文件不写入真实账号密码
+- 环境选择：ERP_ENV 或 config/local.ini [system] environment，默认 cloud_test
+- 敏感凭据优先通过环境变量注入；缺失时读取本地未提交的 config/local.ini
 - 提供基础 preflight 环境预检：对已配置项给出明确结果，缺失项标记待配置，不伪造通过
 """
+import configparser
 import os
+from pathlib import Path
 
-ENV = os.getenv('ERP_ENV', 'cloud_test')
+_LOCAL_CONFIG = None
+_CONFIG_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _CONFIG_DIR.parent
+_LOCAL_CONFIG_PATH = _CONFIG_DIR / 'local.ini'
+_LEGACY_CONFIG_PATH = _REPO_ROOT / 'conf' / 'config.ini'
+
+
+def _local_config():
+    """读取本地 config/local.ini；旧 conf/config.ini 仅作兼容兜底。"""
+    global _LOCAL_CONFIG
+    if _LOCAL_CONFIG is None:
+        parser = configparser.ConfigParser()
+        parser.read([_LEGACY_CONFIG_PATH, _LOCAL_CONFIG_PATH], encoding='utf-8')
+        _LOCAL_CONFIG = parser
+    return _LOCAL_CONFIG
+
+
+def _config_value(section, option, default=''):
+    parser = _local_config()
+    if parser.has_option(section, option):
+        return parser.get(section, option)
+    return default
+
+
+def _env_or_config(env_name, section, option, default=''):
+    return os.getenv(env_name) or _config_value(section, option, default)
+
+
+def _has_env_or_config(env_name, section, option):
+    return bool(os.getenv(env_name) or _config_value(section, option, ''))
+
+
+ENV = _env_or_config('ERP_ENV', 'system', 'environment', 'cloud_test')
 
 # 被测系统信息（明确被测系统为开源项目 jshERP）
 SYSTEM = {
     'name': 'jshERP',
     'repository': 'https://github.com/jishenghua/jshERP',
     'environment': ENV,
-    'deployed_version': os.getenv('ERP_VERSION', '待确认'),
+    'deployed_version': _env_or_config('ERP_VERSION', 'system', 'deployed_version', '待确认'),
     # 'deployed_commit': '待确认',  # 可选，能够确认云端实例对应 Commit 时再填写
 }
 
-# ERP API / UI 地址与登录凭据（环境变量注入）
-ERP_API_URL = os.getenv('ERP_API_URL', '')
-ERP_UI_URL = os.getenv('ERP_UI_URL', '')
-ERP_USERNAME = os.getenv('ERP_USERNAME', '')
-ERP_PASSWORD = os.getenv('ERP_PASSWORD', '')
+# ERP API / UI 地址与登录凭据（环境变量优先，本地 config/local.ini 兜底）
+ERP_API_URL = _env_or_config('ERP_API_URL', 'api_envi', 'host', '')
+ERP_UI_URL = _env_or_config('ERP_UI_URL', 'api_envi', 'ui_host', '')
+ERP_USERNAME = _env_or_config('ERP_USERNAME', 'LOGIN', 'username', '')
+ERP_PASSWORD = _env_or_config('ERP_PASSWORD', 'LOGIN', 'password', '')
 
-# MySQL 配置（环境变量注入）
-MYSQL_HOST = os.getenv('MYSQL_HOST', '')
-MYSQL_PORT = os.getenv('MYSQL_PORT', '3306')
-MYSQL_USERNAME = os.getenv('MYSQL_USERNAME', '')
-MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', '')
-MYSQL_DATABASE = os.getenv('MYSQL_DATABASE', '')
+# MySQL 配置（环境变量优先，本地 config/local.ini 兜底）
+MYSQL_HOST = _env_or_config('MYSQL_HOST', 'MYSQL', 'host', '')
+MYSQL_PORT = _env_or_config('MYSQL_PORT', 'MYSQL', 'port', '3306')
+MYSQL_USERNAME = _env_or_config('MYSQL_USERNAME', 'MYSQL', 'username', '')
+MYSQL_PASSWORD = _env_or_config('MYSQL_PASSWORD', 'MYSQL', 'password', '')
+MYSQL_DATABASE = _env_or_config('MYSQL_DATABASE', 'MYSQL', 'database', '')
 
 # 核心业务 ID（商品分类/仓库/供应商/客户/结算账户/财务账户）
 # 优先通过环境变量注入；未设置时使用当前 cloud_test 环境的默认示例值，
@@ -50,10 +84,9 @@ _BUSINESS_ID_ENV_VARS = {
     'settle_account_id': 'ERP_SETTLE_ACCOUNT_ID',
     'finance_account_id': 'ERP_FINANCE_ACCOUNT_ID',
 }
-BUSINESS_IDS = {
-    key: os.getenv(_BUSINESS_ID_ENV_VARS[key], default)
-    for key, default in _BUSINESS_ID_DEFAULTS.items()
-}
+BUSINESS_IDS = {}
+for key, default in _BUSINESS_ID_DEFAULTS.items():
+    BUSINESS_IDS[key] = _env_or_config(_BUSINESS_ID_ENV_VARS[key], 'BUSINESS_IDS', key, default)
 
 
 def get_api_url():
@@ -63,8 +96,7 @@ def get_api_url():
     """
     if ERP_API_URL:
         return ERP_API_URL.rstrip('/')
-    from conf.operationConfig import OperationConfig
-    return OperationConfig().get_section_for_data('api_envi', 'host').rstrip('/')
+    return ''
 
 
 def preflight():
@@ -92,7 +124,10 @@ def preflight():
           + ', '.join(f'{k}={v}' for k, v in BUSINESS_IDS.items())
           + (f'（缺失: {", ".join(missing_ids)}）' if missing_ids else ''))
     all_ok = all_ok and not missing_ids
-    used_defaults = [k for k in BUSINESS_IDS if not os.getenv(_BUSINESS_ID_ENV_VARS[k])]
+    used_defaults = [
+        k for k in BUSINESS_IDS
+        if not _has_env_or_config(_BUSINESS_ID_ENV_VARS[k], 'BUSINESS_IDS', k)
+    ]
     if used_defaults:
         print(f'  提示: {", ".join(used_defaults)} 使用 cloud_test 默认示例值，可通过对应 ERP_* 环境变量覆盖')
 
