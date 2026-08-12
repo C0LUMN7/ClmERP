@@ -338,6 +338,10 @@ class DebugTalk:
         token = context.get('token') if 'token' in context else self.read.get_extract_yaml('token')
         headers = {"X-Access-Token": token, "Content-Type": "application/json;charset=UTF-8"}
         r = req.get(host + '/material/getMaxBarCode', headers=headers)
+        if r.text and r.text.strip() == 'loginOut':
+            from api.framework.runner import get_runner
+            headers['X-Access-Token'] = get_runner()._relogin()
+            r = req.get(host + '/material/getMaxBarCode', headers=headers)
         max_bc = r.json()['data']['barCode']
         bc = str(int(max_bc) + 1)
         context.set('barCode', bc)

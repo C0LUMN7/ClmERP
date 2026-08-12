@@ -86,6 +86,9 @@ class ApiRunner:
         # 模板变量记录（失败定位变量来源用）
         self.template.used = []
 
+        if base.get('url') == '/user/login':
+            DebugTalk._captcha_data = None
+
         header = self.template.resolve(base.get('header') or {})
         # 附件仅展示脱敏副本（X-Access-Token 等不写入报告），实际请求不受影响
         allure.attach(str(_mask_sensitive(header)), '请求头信息', allure.attachment_type.TEXT)
@@ -181,7 +184,10 @@ class ApiRunner:
                 if response_json is None:
                     response_json = json.loads(response_text)
                 values = jsonpath.jsonpath(response_json, value)
-                extracted = values[0] if values else '未提取到数据，该接口返回结果可能为空'
+                if not values:
+                    logs.warning('提取变量 %s 失败（JSONPath: %s），保留上下文原值', key, value)
+                    continue
+                extracted = values[0]
                 self.context.set(key, extracted)
                 logs.info('提取变量 %s=%s（JSONPath）', key, _mask_extract_log(key, extracted))
 
@@ -198,7 +204,10 @@ class ApiRunner:
                 if response_json is None:
                     response_json = json.loads(response_text)
                 values = jsonpath.jsonpath(response_json, value)
-                extracted = values if values else '未提取到数据，该接口返回结果可能为空'
+                if not values:
+                    logs.warning('提取列表 %s 失败（JSONPath: %s），保留上下文原值', key, value)
+                    continue
+                extracted = values
                 self.context.set(key, extracted)
                 logs.info('提取列表 %s=%s（JSONPath）', key, _mask_extract_log(key, extracted))
 
