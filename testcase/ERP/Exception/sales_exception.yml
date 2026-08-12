@@ -45,8 +45,8 @@
       json:
         info: '{"number":"AUTO_API_EX_SO_SC3_${fixed_timestamp()}","type":"出库","subType":"销售","organId":${get_business_id(customer_organ_id)},"accountId":${get_business_id(settle_account_id)},"totalPrice":2899971,"changeAmount":0,"debt":2899971,"discount":0,"discountMoney":0,"discountLastMoney":2899971,"otherMoney":0,"operTime":"${end_time()}","status":"0"}'
         rows: '[{"name":"AUTO_API_EX_SC3_${fixed_timestamp()}","barCode":"${get_extract_data(barCode)}","depotId":${get_business_id(depot_id)},"operNumber":99999,"unitPrice":29,"allPrice":2899971,"unit":"支","taxRate":0,"taxMoney":0,"taxLastMoney":2899971}]'
-      # 等待人工确认：库存不足时 ERP 返回的业务错误码和错误信息，确认后在此补充
-      # 具体断言；当前先保证状态不变（未生成单据）且库存未被扣减
+      # 已确认缺陷：当前 ERP 实际返回 code=200 并生成未审核单据；
+      # 本用例按业务规则保留失败断言，用于暴露超库存创建单据缺陷。
       validation:
         - ne: { 'code': 200 }
         - db_eq:
