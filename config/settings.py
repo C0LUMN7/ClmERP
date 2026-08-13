@@ -58,6 +58,11 @@ ERP_UI_URL = _env_or_config('ERP_UI_URL', 'api_envi', 'ui_host', '')
 ERP_USERNAME = _env_or_config('ERP_USERNAME', 'LOGIN', 'username', '')
 ERP_PASSWORD = _env_or_config('ERP_PASSWORD', 'LOGIN', 'password', '')
 
+# ERP UI 登录成功判断条件（必须来自真实 jshERP 页面资料，支持 url/title/text）
+# 资料缺失时保持为空，UI 冒烟用例会在启动浏览器前跳过并说明原因
+UI_LOGIN_SUCCESS_KIND = _env_or_config('ERP_UI_LOGIN_SUCCESS_KIND', 'UI', 'login_success_kind', '')
+UI_LOGIN_SUCCESS_VALUE = _env_or_config('ERP_UI_LOGIN_SUCCESS_VALUE', 'UI', 'login_success_value', '')
+
 # MySQL 配置（环境变量优先，本地 config/local.ini 兜底）
 MYSQL_HOST = _env_or_config('MYSQL_HOST', 'MYSQL', 'host', '')
 MYSQL_PORT = _env_or_config('MYSQL_PORT', 'MYSQL', 'port', '3306')
@@ -118,6 +123,10 @@ def preflight():
     for name, ok in checks:
         print(f'  [{"已配置" if ok else "待配置"}] {name}')
         all_ok = all_ok and ok
+
+    ui_login_judge_ready = bool(UI_LOGIN_SUCCESS_KIND and UI_LOGIN_SUCCESS_VALUE)
+    print(f'  [{"已配置" if ui_login_judge_ready else "待确认"}] UI 登录成功判断条件'
+          + ('' if ui_login_judge_ready else '（需人工提供真实 jshERP 页面资料；缺失时 UI 冒烟将跳过）'))
 
     missing_ids = [k for k, v in BUSINESS_IDS.items() if not v]
     print('  [已配置] 核心业务 ID: '

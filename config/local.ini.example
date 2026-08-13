@@ -27,6 +27,15 @@ customer_organ_id = 客户ID
 settle_account_id = 单据结算账户ID
 finance_account_id = 收付款财务账户ID
 
+[UI]
+# 登录成功判断条件：必须来自真实 jshERP 页面资料（人工确认的登录后目标 URL、
+# 页面标题或稳定可见元素），不能猜测填写
+# login_success_kind 支持 url / title / text
+# 两项默认留空：留空时 preflight 标记“待确认”，UI 冒烟用例会跳过，
+# 复制本模板后不会被误判为已配置
+login_success_kind =
+login_success_value =
+
 [REPORT_TYPE]
 type = allure
 
