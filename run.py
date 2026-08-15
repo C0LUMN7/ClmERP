@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import os
+import re
 import time
 from conf.setting import REPORT_TYPE, ALLURE_HOST, ALLURE_PORT
 
@@ -21,6 +22,9 @@ SUITE_MARKERS = {
     'negative': 'negative',
     'exception': 'negative',
 }
+
+
+RUN_TIME_PATTERN = re.compile(r'^[1-9]\d*[smh]$')
 
 
 def _build_pytest_args(test_type: str, suite: str, browser: str = '', headed: bool = False) -> list[str]:
@@ -108,14 +112,86 @@ def run_suite(test_type: str, suite: str, browser: str = '', headed: bool = Fals
     sys.exit(exit_code)
 
 
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('必须是正整数') from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError('必须是正整数')
+    return parsed
+
+
+def _positive_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('必须是正数') from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError('必须是正数')
+    return parsed
+
+
+def _run_time(value: str) -> str:
+    if not RUN_TIME_PATTERN.fullmatch(value):
+        raise argparse.ArgumentTypeError('格式必须是正整数加单位，例如 30s、1m、1h')
+    return value
+
+
+def run_performance(users: int, spawn_rate: float, run_time: str, scenario: str) -> None:
+    """性能测试显式入口。
+
+    显式执行 Locust headless，只运行 performance/locustfile.py 中的只读场景。
+    """
+    report_dir = './reports/locust'
+    os.makedirs(report_dir, exist_ok=True)
+    timestamp = time.strftime('%Y%m%d-%H%M%S')
+    html_report = f'{report_dir}/{scenario}-{timestamp}.html'
+    csv_prefix = f'{report_dir}/{scenario}-{timestamp}'
+    locust_args = [
+        sys.executable,
+        '-m',
+        'locust',
+        '-f',
+        './performance/locustfile.py',
+        '--headless',
+        '--users',
+        str(users),
+        '--spawn-rate',
+        str(spawn_rate),
+        '--run-time',
+        run_time,
+        '--html',
+        html_report,
+        '--csv',
+        csv_prefix,
+        '--only-summary',
+        '--exit-code-on-error',
+        '1',
+    ]
+
+    print('执行 Locust 只读性能调试参数: ' + ' '.join(locust_args))
+    print(f'场景: {scenario}')
+    print(f'并发用户数: {users}')
+    print(f'用户生成速率: {spawn_rate}/s')
+    print(f'运行时长: {run_time}')
+    print(f'HTML 报告路径: {html_report}')
+    print(f'CSV 输出前缀: {csv_prefix}')
+
+    result = subprocess.run(locust_args)
+    if result.returncode != 0:
+        print('错误: Locust 只读性能调试失败，请先分析失败原因，不继续升压')
+    sys.exit(result.returncode)
+
+
 if __name__ == '__main__':
     import pytest
 
     parser = argparse.ArgumentParser(description='ERP 自动化测试统一执行入口')
     parser.add_argument(
         'test_type',
-        choices=['api', 'ui', 'e2e', 'preflight'],
-        help='测试类型: api(接口) / ui(UI) / e2e(跨层闭环) / preflight(环境预检)',
+        choices=['api', 'ui', 'e2e', 'preflight', 'performance'],
+        help='测试类型: api(接口) / ui(UI) / e2e(跨层闭环) / preflight(环境预检) / performance(性能骨架)',
     )
     parser.add_argument(
         '--suite',
@@ -134,8 +210,37 @@ if __name__ == '__main__':
         action='store_true',
         help='有头模式运行（仅对 ui/e2e 有效）',
     )
+    parser.add_argument(
+        '--users',
+        type=_positive_int,
+        default=None,
+        help='并发用户数（仅对 performance 有效）',
+    )
+    parser.add_argument(
+        '--spawn-rate',
+        type=_positive_float,
+        default=None,
+        help='用户生成速率，单位 users/s（仅对 performance 有效）',
+    )
+    parser.add_argument(
+        '--run-time',
+        type=_run_time,
+        default=None,
+        help='运行时长，格式如 30s、1m、1h（仅对 performance 有效）',
+    )
+    parser.add_argument(
+        '--scenario',
+        choices=['readonly'],
+        default=None,
+        help='性能场景（仅对 performance 有效；当前仅保留只读骨架）',
+    )
     args = parser.parse_args()
 
+    performance_args = any(value is not None for value in (args.users, args.spawn_rate, args.run_time, args.scenario))
+    if args.test_type != 'performance' and performance_args:
+        parser.error('--users / --spawn-rate / --run-time / --scenario 仅对 performance 命令有效')
+    if args.test_type == 'performance' and args.suite != 'all':
+        parser.error('--suite 仅对 api/ui/e2e 命令有效')
     if args.test_type in ('ui', 'e2e') and args.suite not in ('smoke', 'all'):
         # 页面和跨层套件范围保持明确，不会误触发其它测试类型或性能任务
         parser.error(f'{args.test_type} 当前只支持 --suite smoke / all')
@@ -144,5 +249,13 @@ if __name__ == '__main__':
     if args.test_type == 'preflight':
         from config.settings import preflight
         sys.exit(0 if preflight() else 1)
+    if args.test_type == 'performance':
+        run_performance(
+            args.users or 1,
+            args.spawn_rate or 1.0,
+            args.run_time or '1m',
+            args.scenario or 'readonly',
+        )
+        sys.exit(0)
 
     run_suite(args.test_type, args.suite, args.browser or '', args.headed)
