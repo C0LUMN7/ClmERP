@@ -24,14 +24,17 @@ SUITE_MARKERS = {
 
 
 def _build_pytest_args(test_type: str, suite: str, browser: str = '', headed: bool = False) -> list[str]:
-    """按测试类型构建 pytest 参数：api/ui 使用各自用例目录和 Allure 结果目录。
+    """按测试类型构建 pytest 参数：各类型使用独立用例目录和 Allure 结果目录。
 
-    ui 额外传入官方 pytest-playwright 参数：浏览器类型、有头模式，
+    ui/e2e 额外传入官方 pytest-playwright 参数：浏览器类型、有头模式，
     以及截图/视频/Trace 产物配置（统一收敛到 reports/playwright）。
     """
     if test_type == 'api':
         target = './api/'
         alluredir = './reports/allure-results/api'
+    elif test_type == 'e2e':
+        target = './e2e/'
+        alluredir = './reports/allure-results/e2e'
     else:
         target = './ui/'
         alluredir = './reports/allure-results/ui'
@@ -41,8 +44,8 @@ def _build_pytest_args(test_type: str, suite: str, browser: str = '', headed: bo
         args.append(f'--browser={browser}')
     if headed:
         args.append('--headed')
-    if test_type == 'ui':
-        # UI 失败截图/视频/Trace 自动留存，产物统一到 reports/playwright
+    if test_type in ('ui', 'e2e'):
+        # 页面失败截图/视频/Trace 自动留存，产物统一到 reports/playwright
         args.extend([
             '--output=./reports/playwright',
             '--screenshot=only-on-failure',
@@ -111,8 +114,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ERP 自动化测试统一执行入口')
     parser.add_argument(
         'test_type',
-        choices=['api', 'ui', 'preflight'],
-        help='测试类型: api(接口) / ui(UI) / preflight(环境预检)',
+        choices=['api', 'ui', 'e2e', 'preflight'],
+        help='测试类型: api(接口) / ui(UI) / e2e(跨层闭环) / preflight(环境预检)',
     )
     parser.add_argument(
         '--suite',
@@ -124,20 +127,20 @@ if __name__ == '__main__':
         '--browser',
         choices=['chromium', 'firefox', 'webkit'],
         default=None,
-        help='UI 浏览器类型（仅对 ui 有效），默认 chromium，默认 headless',
+        help='浏览器类型（仅对 ui/e2e 有效），默认 chromium，默认 headless',
     )
     parser.add_argument(
         '--headed',
         action='store_true',
-        help='UI 有头模式运行（仅对 ui 有效）',
+        help='有头模式运行（仅对 ui/e2e 有效）',
     )
     args = parser.parse_args()
 
-    if args.test_type == 'ui' and args.suite not in ('smoke', 'all'):
-        # UI 套件范围保持明确：只收集 ./ui/ 目录，不会误触发 API 回归、数据库清理或性能测试
-        parser.error('ui 当前只支持 --suite smoke / all')
-    if args.test_type != 'ui' and (args.browser or args.headed):
-        parser.error('--browser / --headed 仅对 ui 命令有效')
+    if args.test_type in ('ui', 'e2e') and args.suite not in ('smoke', 'all'):
+        # 页面和跨层套件范围保持明确，不会误触发其它测试类型或性能任务
+        parser.error(f'{args.test_type} 当前只支持 --suite smoke / all')
+    if args.test_type not in ('ui', 'e2e') and (args.browser or args.headed):
+        parser.error('--browser / --headed 仅对 ui/e2e 命令有效')
     if args.test_type == 'preflight':
         from config.settings import preflight
         sys.exit(0 if preflight() else 1)

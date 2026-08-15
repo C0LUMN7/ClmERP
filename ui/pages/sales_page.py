@@ -60,7 +60,7 @@ class SalesPage(BasePage):
         self._confirm_operation()
         self.assert_order_status(order_no, "未审核")
 
-    def transfer_to_sales_out(self, order_no: str, outbound_no: str) -> None:
+    def transfer_to_sales_out(self, order_no: str, outbound_no: str) -> str:
         """把已审核销售订单转为未审核销售出库单"""
         self._select_order(order_no)
         self._click_toolbar_button("转销售出库")
@@ -72,13 +72,26 @@ class SalesPage(BasePage):
         expect(dialog).to_be_hidden(timeout=15000)
         self.assert_order_status(order_no, "完成销售")
         self.assert_sales_out_unapproved(outbound_no)
+        return outbound_no
 
     def assert_sales_out_unapproved(self, outbound_no: str) -> None:
         """按单号查询并断言销售出库单为未审核"""
+        self.assert_sales_out_status(outbound_no, "未审核")
+
+    def audit_sales_out(self, outbound_no: str) -> str:
+        """审核销售出库单，并断言状态变为已审核"""
+        self._select_sales_out(outbound_no)
+        self._click_toolbar_button("审核")
+        self._confirm_operation()
+        self.assert_sales_out_status(outbound_no, "已审核")
+        return outbound_no
+
+    def assert_sales_out_status(self, outbound_no: str, status: str) -> None:
+        """按单号查询并断言销售出库单状态"""
         row = self._query_sales_out(outbound_no)
         expect(row).to_contain_text(self.CUSTOMER_NAME)
         expect(row).to_contain_text(self.PRODUCT_NAME)
-        expect(row).to_contain_text("未审核")
+        expect(row).to_contain_text(status)
 
     def assert_order_status(self, order_no: str, status: str) -> None:
         """按单号查询并断言销售订单状态"""
@@ -106,6 +119,12 @@ class SalesPage(BasePage):
 
     def _select_order(self, order_no: str) -> None:
         row = self._query_order(order_no)
+        checkbox = row.locator(".ant-checkbox-input").first
+        if not checkbox.is_checked():
+            checkbox.click()
+
+    def _select_sales_out(self, outbound_no: str) -> None:
+        row = self._query_sales_out(outbound_no)
         checkbox = row.locator(".ant-checkbox-input").first
         if not checkbox.is_checked():
             checkbox.click()
@@ -169,9 +188,9 @@ class SalesPage(BasePage):
         option.click()
 
     def _overwrite_input(self, locator, value: str) -> None:
-        locator.click()
-        self.page.keyboard.press("Control+A")
-        self.page.keyboard.type(value)
+        expect(locator).to_be_visible(timeout=10000)
+        locator.fill(value)
+        expect(locator).to_have_value(value, timeout=5000)
 
     def _close_intro(self) -> None:
         skip = self.page.locator(".introjs-skipbutton")

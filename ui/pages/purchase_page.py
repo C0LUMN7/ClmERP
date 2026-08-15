@@ -60,7 +60,7 @@ class PurchasePage(BasePage):
         self._confirm_operation()
         self.assert_order_status(order_no, "未审核")
 
-    def transfer_to_purchase_in(self, order_no: str, inbound_no: str) -> None:
+    def transfer_to_purchase_in(self, order_no: str, inbound_no: str) -> str:
         """把已审核采购订单转为未审核采购入库单"""
         self._select_order(order_no)
         self._click_toolbar_button("转采购入库")
@@ -72,13 +72,26 @@ class PurchasePage(BasePage):
         expect(dialog).to_be_hidden(timeout=15000)
         self.assert_order_status(order_no, "完成采购")
         self.assert_purchase_in_unapproved(inbound_no)
+        return inbound_no
 
     def assert_purchase_in_unapproved(self, inbound_no: str) -> None:
         """按单号查询并断言采购入库单为未审核"""
+        self.assert_purchase_in_status(inbound_no, "未审核")
+
+    def audit_purchase_in(self, inbound_no: str) -> str:
+        """审核采购入库单，并断言状态变为已审核"""
+        self._select_purchase_in(inbound_no)
+        self._click_toolbar_button("审核")
+        self._confirm_operation()
+        self.assert_purchase_in_status(inbound_no, "已审核")
+        return inbound_no
+
+    def assert_purchase_in_status(self, inbound_no: str, status: str) -> None:
+        """按单号查询并断言采购入库单状态"""
         row = self._query_purchase_in(inbound_no)
         expect(row).to_contain_text(self.SUPPLIER_NAME)
         expect(row).to_contain_text(self.PRODUCT_NAME)
-        expect(row).to_contain_text("未审核")
+        expect(row).to_contain_text(status)
 
     def assert_order_status(self, order_no: str, status: str) -> None:
         """按单号查询并断言采购订单状态"""
@@ -106,6 +119,12 @@ class PurchasePage(BasePage):
 
     def _select_order(self, order_no: str) -> None:
         row = self._query_order(order_no)
+        checkbox = row.locator(".ant-checkbox-input").first
+        if not checkbox.is_checked():
+            checkbox.click()
+
+    def _select_purchase_in(self, inbound_no: str) -> None:
+        row = self._query_purchase_in(inbound_no)
         checkbox = row.locator(".ant-checkbox-input").first
         if not checkbox.is_checked():
             checkbox.click()
@@ -169,9 +188,9 @@ class PurchasePage(BasePage):
         option.click()
 
     def _overwrite_input(self, locator, value: str) -> None:
-        locator.click()
-        self.page.keyboard.press("Control+A")
-        self.page.keyboard.type(value)
+        expect(locator).to_be_visible(timeout=10000)
+        locator.fill(value)
+        expect(locator).to_have_value(value, timeout=5000)
 
     def _close_intro(self) -> None:
         skip = self.page.locator(".introjs-skipbutton")
