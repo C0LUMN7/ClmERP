@@ -52,3 +52,4 @@ config/local.ini
 # 运行期日志产物（兼容旧反斜杠路径遗留的根目录日志文件，如 logs\test.20260810.log）
 logs\*.log
 *.log
+docs/
