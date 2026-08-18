@@ -98,7 +98,7 @@ jobs:
           if not url:
               raise SystemExit("ERP_API_URL is empty")
           urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-          response = requests.get(url, timeout=15, verify=False)
+          response = requests.get(f"{url}/user/login", timeout=15, verify=False)
           if response.status_code >= 500:
               raise SystemExit(f"ERP API endpoint returned {response.status_code}")
           print(f"ERP_API_URL reachable, status={response.status_code}")
@@ -205,7 +205,12 @@ jobs:
           print(f"ERP_UI_URL reachable, status={response.status_code}")
           PY
 
+      - name: Collect UI smoke tests for pull requests
+        if: github.event_name == 'pull_request'
+        run: python run.py ui --suite smoke --collect-only
+
       - name: Run UI smoke tests
+        if: github.event_name != 'pull_request'
         run: python run.py ui --suite smoke
 
       - name: Upload UI test artifacts
