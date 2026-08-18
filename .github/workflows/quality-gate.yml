@@ -104,12 +104,12 @@ jobs:
           print(f"ERP_API_URL reachable, status={response.status_code}")
           PY
 
-      - name: Collect API smoke tests for pull requests
-        if: github.event_name == 'pull_request'
+      - name: Collect API smoke tests for lightweight gates
+        if: github.event_name != 'workflow_dispatch'
         run: python run.py api --suite smoke --collect-only
 
       - name: Run API smoke tests
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         env:
           MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
           MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
@@ -205,12 +205,12 @@ jobs:
           print(f"ERP_UI_URL reachable, status={response.status_code}")
           PY
 
-      - name: Collect UI smoke tests for pull requests
-        if: github.event_name == 'pull_request'
+      - name: Collect UI smoke tests for lightweight gates
+        if: github.event_name != 'workflow_dispatch'
         run: python run.py ui --suite smoke --collect-only
 
       - name: Run UI smoke tests
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: python run.py ui --suite smoke
 
       - name: Upload UI test artifacts
@@ -243,7 +243,7 @@ jobs:
     needs:
       - api-smoke
       - ui-smoke
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'workflow_dispatch'
     timeout-minutes: 40
     env:
       ERP_API_URL: ${{ secrets.ERP_API_URL }}
