@@ -25,9 +25,18 @@ SUITE_MARKERS = {
 
 
 RUN_TIME_PATTERN = re.compile(r'^[1-9]\d*[smh]$')
+RUN_TIME_UNITS = {'s': 1, 'm': 60, 'h': 3600}
+MAX_PERFORMANCE_USERS = 10
+MAX_PERFORMANCE_RUN_SECONDS = 5 * 60
 
 
-def _build_pytest_args(test_type: str, suite: str, browser: str = '', headed: bool = False) -> list[str]:
+def _build_pytest_args(
+    test_type: str,
+    suite: str,
+    browser: str = '',
+    headed: bool = False,
+    collect_only: bool = False,
+) -> list[str]:
     """按测试类型构建 pytest 参数：各类型使用独立用例目录和 Allure 结果目录。
 
     ui/e2e 额外传入官方 pytest-playwright 参数：浏览器类型、有头模式，
@@ -61,6 +70,9 @@ def _build_pytest_args(test_type: str, suite: str, browser: str = '', headed: bo
         args.extend(['-m', marker, target])
     else:
         args.append(target)
+    if collect_only:
+        args.append('--collect-only')
+        return args
     args.extend([
         f'--alluredir={alluredir}',
         f'--junitxml=./reports/{test_type}_results.xml',
@@ -87,14 +99,16 @@ def _generate_allure_report(test_type: str) -> str:
     return report_dir
 
 
-def run_suite(test_type: str, suite: str, browser: str = '', headed: bool = False) -> None:
+def run_suite(test_type: str, suite: str, browser: str = '', headed: bool = False, collect_only: bool = False) -> None:
     if REPORT_TYPE != 'allure':
         print('当前 REPORT_TYPE 不是 allure，跳过测试执行')
         sys.exit(0)
 
-    pytest_args = _build_pytest_args(test_type, suite, browser, headed)
+    pytest_args = _build_pytest_args(test_type, suite, browser, headed, collect_only)
     print(f'执行 pytest 参数: {" ".join(pytest_args)}')
     exit_code = pytest.main(pytest_args)
+    if collect_only:
+        sys.exit(exit_code)
 
     env_xml = './conf/environment.xml'
     results_dir = f'./reports/allure-results/{test_type}'
@@ -122,6 +136,13 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def _performance_users(value: str) -> int:
+    parsed = _positive_int(value)
+    if parsed > MAX_PERFORMANCE_USERS:
+        raise argparse.ArgumentTypeError(f'不能超过 {MAX_PERFORMANCE_USERS}')
+    return parsed
+
+
 def _positive_float(value: str) -> float:
     try:
         parsed = float(value)
@@ -132,9 +153,15 @@ def _positive_float(value: str) -> float:
     return parsed
 
 
+def _run_time_seconds(value: str) -> int:
+    return int(value[:-1]) * RUN_TIME_UNITS[value[-1]]
+
+
 def _run_time(value: str) -> str:
     if not RUN_TIME_PATTERN.fullmatch(value):
         raise argparse.ArgumentTypeError('格式必须是正整数加单位，例如 30s、1m、1h')
+    if _run_time_seconds(value) > MAX_PERFORMANCE_RUN_SECONDS:
+        raise argparse.ArgumentTypeError('不能超过 5m')
     return value
 
 
@@ -148,6 +175,7 @@ def run_performance(users: int, spawn_rate: float, run_time: str, scenario: str)
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     html_report = f'{report_dir}/{scenario}-{timestamp}.html'
     csv_prefix = f'{report_dir}/{scenario}-{timestamp}'
+    log_file = f'{report_dir}/{scenario}-{timestamp}.log'
     locust_args = [
         sys.executable,
         '-m',
@@ -165,6 +193,8 @@ def run_performance(users: int, spawn_rate: float, run_time: str, scenario: str)
         html_report,
         '--csv',
         csv_prefix,
+        '--logfile',
+        log_file,
         '--only-summary',
         '--exit-code-on-error',
         '1',
@@ -177,6 +207,7 @@ def run_performance(users: int, spawn_rate: float, run_time: str, scenario: str)
     print(f'运行时长: {run_time}')
     print(f'HTML 报告路径: {html_report}')
     print(f'CSV 输出前缀: {csv_prefix}')
+    print(f'日志路径: {log_file}')
 
     result = subprocess.run(locust_args)
     if result.returncode != 0:
@@ -211,10 +242,15 @@ if __name__ == '__main__':
         help='有头模式运行（仅对 ui/e2e 有效）',
     )
     parser.add_argument(
+        '--collect-only',
+        action='store_true',
+        help='只收集用例，不执行、不生成报告（仅对 api/ui/e2e 有效）',
+    )
+    parser.add_argument(
         '--users',
-        type=_positive_int,
+        type=_performance_users,
         default=None,
-        help='并发用户数（仅对 performance 有效）',
+        help=f'并发用户数，最大 {MAX_PERFORMANCE_USERS}（仅对 performance 有效）',
     )
     parser.add_argument(
         '--spawn-rate',
@@ -226,7 +262,7 @@ if __name__ == '__main__':
         '--run-time',
         type=_run_time,
         default=None,
-        help='运行时长，格式如 30s、1m、1h（仅对 performance 有效）',
+        help='运行时长，格式如 30s、1m、5m，最长 5m（仅对 performance 有效）',
     )
     parser.add_argument(
         '--scenario',
@@ -239,6 +275,8 @@ if __name__ == '__main__':
     performance_args = any(value is not None for value in (args.users, args.spawn_rate, args.run_time, args.scenario))
     if args.test_type != 'performance' and performance_args:
         parser.error('--users / --spawn-rate / --run-time / --scenario 仅对 performance 命令有效')
+    if args.test_type == 'performance' and args.collect_only:
+        parser.error('--collect-only 仅对 api/ui/e2e 命令有效')
     if args.test_type == 'performance' and args.suite != 'all':
         parser.error('--suite 仅对 api/ui/e2e 命令有效')
     if args.test_type in ('ui', 'e2e') and args.suite not in ('smoke', 'all'):
@@ -247,6 +285,8 @@ if __name__ == '__main__':
     if args.test_type not in ('ui', 'e2e') and (args.browser or args.headed):
         parser.error('--browser / --headed 仅对 ui/e2e 命令有效')
     if args.test_type == 'preflight':
+        if args.collect_only:
+            parser.error('--collect-only 仅对 api/ui/e2e 命令有效')
         from config.settings import preflight
         sys.exit(0 if preflight() else 1)
     if args.test_type == 'performance':
@@ -258,4 +298,4 @@ if __name__ == '__main__':
         )
         sys.exit(0)
 
-    run_suite(args.test_type, args.suite, args.browser or '', args.headed)
+    run_suite(args.test_type, args.suite, args.browser or '', args.headed, args.collect_only)

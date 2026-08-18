@@ -1,172 +1,183 @@
-# ERP 接口自动化测试框架
+# ERP 自动化测试框架
 
-基于 jshERP 进销存系统的接口自动化测试框架，用于接口回归、业务链路验证和数据一致性校验。通过一键回归和 GitHub Actions 持续集成，提升测试效率。
+本项目面向开源进销存系统 jshERP，整合 API 自动化、Playwright UI 自动化、跨层 E2E 冒烟和 Locust 只读性能基线。当前文档描述的是仓库已有能力和执行边界；未在 GitHub Actions 中真实跑通的内容不会标记为已通过。
 
 ## 被测系统
 
-| 项               | 值                                    |
-| ---------------- | ------------------------------------- |
-| system.name      | jshERP                                |
-| repository       | https://github.com/jishenghua/jshERP  |
-| environment      | cloud_test（另有可选 local）            |
-| deployed_version | 待确认（云端测试实例部署版本，确认后通过环境变量 `ERP_VERSION` 写入） |
-| deployed_commit  | 待确认（可选，能够确认时再填写）          |
+| 项 | 值 |
+| --- | --- |
+| system.name | jshERP |
+| repository | https://github.com/jishenghua/jshERP |
+| environment | cloud_test（可通过 `ERP_ENV` 切换） |
+| deployed_version | 管伊佳ERP V3.6 或通过 `ERP_VERSION` 覆盖 |
+| deployed_commit | 待确认，能够确认时再补充 |
 
-被测系统版本信息同时记录在 `config/settings.py` 与 `config/environments.yaml.example` 中；无法确认精确版本/Commit 时如实标记待确认，不伪造。
+## 当前能力
 
-## 项目亮点
-
-- **YAML 数据驱动** — 测试数据与脚本分离，新增接口用例只需编写 YAML 文件，无需修改框架代码
-- **JSONPath 提取与接口参数传递** — 通过会话运行上下文实现接口间数据依赖，一个接口的响应字段可自动提取并传递给后续接口，串联完整业务链路
-- **Token 自动管理** — session 级 fixture 自动完成登录鉴权，Token 过期时自动检测并重新登录，保证长时间测试稳定性
-- **多类型断言 + MySQL 数据库断言** — 支持 contains、eq、ne、rv、db、db_eq 六种断言，不只验证状态码，还校验数据落库一致性
-- **全面的场景覆盖** — 覆盖单接口 CRUD、采购/销售完整业务链路、Token 鉴权异常、库存溢出、重复提交、重复审核、超额收款等异常与边界场景
-- **基于 pytest marker 的一键回归** — 通过 `run.py api --suite` 选择 smoke / single / business / exception / all，统一处理报告生成
-- **GitHub Actions 持续集成** — 手动触发真实接口测试并归档报告；push 触发仅做语法检查和用例收集，不污染测试环境
+- API 自动化：复用真实 jshERP YAML 基线，覆盖商品、仓库、采购、销售、异常边界和采购/销售接口链路。
+- UI 自动化：使用官方 `pytest-playwright`，包含登录、采购转入库、销售转出库等 ERP 页面冒烟用例；失败产物输出到统一 Playwright 目录。
+- E2E 冒烟：采购和销售跨层闭环，串联 UI 操作、API 查询和数据库校验；需要真实 ERP、账号和数据库配置。
+- Locust 只读性能基线：仅包含登录、商品列表、库存列表和单据列表等只读请求，不执行采购、销售、审核、付款、收款等写入类性能场景。
+- 统一入口：根目录 `run.py` 负责 API、UI、E2E、环境预检和性能入口。
+- 报告产物：API/UI/E2E 使用分目录 Allure 原始结果，UI/E2E 使用 Playwright 截图、视频和 Trace，性能输出 Locust HTML、CSV 和日志。
 
 ## 技术栈
 
-| 技术/工具           | 作用                    |
-| ------------------- | ----------------------- |
-| Python              | 编程语言                |
-| pytest              | 测试执行与用例管理      |
-| requests            | HTTP 接口请求           |
-| YAML                | 测试数据驱动            |
-| JSONPath            | 响应字段提取            |
-| MySQL / PyMySQL     | 数据库断言              |
-| Allure              | 可视化测试报告          |
-| GitHub Actions      | CI 自动化执行与报告归档 |
+| 技术/工具 | 作用 |
+| --- | --- |
+| Python / pytest | 测试执行、fixture 和 marker 管理 |
+| requests / YAML / JSONPath | API 请求、数据驱动和响应字段提取 |
+| Playwright | Web UI 自动化、截图、视频和 Trace |
+| MySQL / PyMySQL | 数据库断言和测试数据复核 |
+| Allure | API、UI、E2E 可视化报告 |
+| Locust | 只读性能基线与 HTML/CSV 输出 |
+| GitHub Actions | 质量门禁与手动性能流水线 |
 
 ## 项目结构
 
-```
+```text
 column-erp-testing/
-├── api/                      # API 自动化
-│   ├── conftest.py           # API 登录、Token、数据清理 fixture
-│   ├── framework/            # 统一 API 执行器：runner / yaml_loader / template / assertions
-│   ├── schemas/              # 关键稳定接口的 JSON Schema 契约
-│   ├── login.yaml            # 登录用例（真实 YAML 基线）
-│   └── cases/
-│       ├── goods/            # 商品管理单接口测试及 YAML
-│       ├── warehouse/        # 仓库管理单接口测试及 YAML
-│       ├── purchase/         # 采购管理单接口测试及 YAML
-│       ├── sales/            # 销售管理单接口测试及 YAML
-│       ├── scenarios/        # 采购、销售完整接口链路
-│       └── negative/         # 异常与边界测试
-├── ui/                       # Playwright UI 自动化（技术骨架）
-│   ├── conftest.py           # 浏览器/Context fixture 骨架（后续启用）
-│   └── cases/                # 当前仅收集骨架用例，正式 ERP UI 用例待真实页面资料
-├── performance/              # Locust 性能测试（骨架目录，后续实现）
-├── shared/                   # API/UI/性能共享能力（骨架目录）
-├── config/                   # 统一配置
-│   ├── settings.py           # 多环境配置读取与 preflight 预检
-│   └── environments.yaml.example
+├── api/                      # API 自动化用例、YAML、Schema 和统一执行器
+├── ui/                       # Playwright UI 用例、fixture、页面对象
+├── e2e/                      # API + UI + 数据库跨层冒烟
+├── performance/              # Locust 只读性能测试
+├── shared/                   # API/UI/E2E 复用的客户端和数据库辅助方法
+├── config/                   # 统一配置读取与配置模板
 ├── reports/                  # 统一运行产物（Git 忽略）
-├── base/                     # 核心框架层（兼容层）：委托统一 Runner 执行
-├── common/                   # 公共组件层：断言引擎、数据库连接、动态数据生成、通知
-├── conf/                     # 配置层（现有）：config.ini、环境信息、全局常量
-├── testcase/ERP/             # 原接口项目用例（保留，已复制迁移至 api/cases/）
-├── .github/workflows/        # GitHub Actions 工作流定义
-├── run.py                    # 统一执行入口（api / ui / preflight）
-├── pytest.ini                # pytest 配置与 marker 定义
-└── requirements.txt          # 合并后的依赖清单
+├── base/                     # 兼容旧调用的执行入口
+├── common/                   # 请求、日志、数据库连接和动态数据工具
+├── testcase/ERP/             # 原接口项目用例保留目录
+├── .github/workflows/        # GitHub Actions workflow
+├── run.py                    # 统一执行入口
+├── pytest.ini                # pytest 配置与 marker
+└── requirements.txt          # 依赖清单
 ```
 
-## 核心流程
-
-1. 读取 `conf/config.ini` 获取环境与数据库配置
-2. session 级 fixture 自动登录，识别验证码，提取 Token 并写入会话运行上下文
-3. 加载 YAML 测试用例
-4. 替换动态参数，如 `${timestamp()}`、`${get_extract_data(token)}`
-5. 发送 HTTP 请求
-6. 使用 JSONPath 提取响应字段并写入会话运行上下文
-7. 执行响应断言和数据库断言
-8. 生成 Allure 报告、JUnit XML 和日志
-9. 本地通过 `allure open` 查看报告；CI 中上传 artifacts
-
-## 用例分组与一键回归
-
-| suite     | marker    | 说明            |
-| --------- | --------- | --------------- |
-| smoke     | smoke     | 冒烟测试，快速验证核心链路 |
-| single    | single    | 单接口测试       |
-| business  | business  | 采购/销售业务链路测试 |
-| exception | exception | 异常与边界场景测试 |
-| all       | 无         | 全量回归         |
+## 统一入口
 
 ```bash
-# 使用 run.py（推荐，统一处理报告生成与 CI 适配）
+# 环境预检
+python run.py preflight
+
+# API
 python run.py api --suite smoke
 python run.py api --suite single
 python run.py api --suite business
-python run.py api --suite exception
+python run.py api --suite negative
 python run.py api --suite all
+python run.py api --collect-only
+
+# UI
+python run.py ui --suite smoke
 python run.py ui --suite all
+python run.py ui --browser chromium --headed
+python run.py ui --collect-only
 
-# 环境预检（对已配置项给出明确结果，缺失项标记待配置）
-python run.py preflight
+# E2E
+python run.py e2e --suite smoke
+python run.py e2e --suite all
+python run.py e2e --collect-only
 
-# 或直接使用 pytest 原生命令（用例收集检查）
-pytest api --collect-only
-pytest ui --collect-only
-pytest -m smoke api
+# 只读性能基线
+python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-time 1m
 ```
 
-## 测试场景覆盖
+`performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
 
-### 单接口测试
+## 配置说明
 
-覆盖商品管理、仓库管理、采购管理、销售管理等模块的接口 CRUD 验证。
+本地优先使用环境变量或 `config/local.ini`；模板见 `config/local.ini.example` 和 `config/environments.yaml.example`。敏感信息不要写入代码、YAML、报告或提交记录。
 
-### 业务链路测试
+常用环境变量：
 
-- **采购链路**：创建商品 → 采购入库 → 查询 → 审核 → 付款
-- **销售链路**：创建商品 → 销售出库 → 查询 → 审核 → 收款
+| 变量 | 说明 |
+| --- | --- |
+| `ERP_ENV` | 环境名，默认 `cloud_test` |
+| `ERP_VERSION` | 云端测试实例版本说明 |
+| `ERP_API_URL` | jshERP 后端 API 根地址 |
+| `ERP_UI_URL` | jshERP 前端根地址 |
+| `ERP_USERNAME` | 测试账号 |
+| `ERP_PASSWORD` | 测试密码 |
+| `MYSQL_HOST` | MySQL 地址，E2E 和数据库断言需要 |
+| `MYSQL_PORT` | MySQL 端口 |
+| `MYSQL_USERNAME` | MySQL 用户名 |
+| `MYSQL_PASSWORD` | MySQL 密码 |
+| `MYSQL_DATABASE` | MySQL 数据库名 |
+| `ERP_CATEGORY_ID` | 商品分类 ID |
+| `ERP_DEPOT_ID` | 默认仓库 ID |
+| `ERP_SUPPLIER_ORGAN_ID` | 供应商 ID |
+| `ERP_CUSTOMER_ORGAN_ID` | 客户 ID |
+| `ERP_SETTLE_ACCOUNT_ID` | 单据结算账户 ID |
+| `ERP_FINANCE_ACCOUNT_ID` | 收付款财务账户 ID |
+| `ERP_UI_LOGIN_SUCCESS_KIND` | UI 登录成功判断方式：`url` / `title` / `text` |
+| `ERP_UI_LOGIN_SUCCESS_VALUE` | UI 登录成功判断值 |
 
-### 异常与边界场景测试
+## 报告路径
 
-| 场景                  | 校验重点                                   |
-| -------------------- | ---------------------------------------- |
-| Token 为空           | 无 Token 时不能正常访问核心接口              |
-| Token 错误           | 非法 Token 不能获取业务数据                  |
-| 销售出库数量大于库存     | 库存不能变成负数，不能错误扣减                 |
-| 重复提交销售单号       | 相同单号不能重复生成有效单据                   |
-| 重复审核销售单         | 库存不能重复扣减，单据状态保持一致              |
-| 超额收款边界场景       | 系统允许超额收款，校验收款金额、欠款状态、明细关联的数据一致性 |
+| 产物 | 路径 |
+| --- | --- |
+| API Allure 原始结果 | `reports/allure-results/api/` |
+| UI Allure 原始结果 | `reports/allure-results/ui/` |
+| E2E Allure 原始结果 | `reports/allure-results/e2e/` |
+| Allure HTML 报告 | `reports/allure-report/<类型>-<时间戳>/` |
+| Playwright 截图、视频、Trace | `reports/playwright/` |
+| Locust HTML、CSV、日志 | `reports/locust/` |
+| JUnit XML | `reports/api_results.xml`、`reports/ui_results.xml`、`reports/e2e_results.xml` |
 
-## 数据库断言
-
-- `db`：验证 SQL 查询结果是否存在
-- `db_eq`：验证 SQL 查询结果是否等于预期值
-
-用于校验单据状态、库存变化、收付款金额、收款明细关联、异常请求是否产生脏数据等场景。
+`.runtime/auth/` 只用于 Playwright 登录态，不属于报告目录，不应上传为 artifact。
 
 ## GitHub Actions
 
-当前工作流文件位于 `.github/workflows/api-test.yml`：
+当前仓库包含三个 workflow 文件：
 
-- **手动触发（`workflow_dispatch`）**：可选择 smoke / single / business / exception / all 套件，真实请求 ERP 测试环境并归档报告
-- **push 触发**：只执行 `py_compile` 语法检查和 `pytest --collect-only` 用例收集，不请求真实接口，避免脏数据
-- 使用 GitHub Secrets 动态生成 `conf/config.ini`
-- 上传 artifacts：JUnit XML 结果文件、Allure 原始结果、Allure HTML 报告、日志
+| 文件 | 用途 |
+| --- | --- |
+| `.github/workflows/api-test.yml` | 旧 API workflow，保留兼容 |
+| `.github/workflows/quality-gate.yml` | API/UI/E2E 质量门禁 |
+| `.github/workflows/performance-tests.yml` | 手动只读性能流水线 |
 
-需要配置的 Secrets：
+质量门禁策略：
 
-| Secret             | 说明            |
-| ------------------ | --------------- |
-| ERP_HOST           | ERP 服务地址     |
-| MYSQL_HOST         | MySQL 地址       |
-| MYSQL_PORT         | MySQL 端口       |
-| MYSQL_USERNAME     | MySQL 用户名     |
-| MYSQL_PASSWORD     | MySQL 密码       |
-| MYSQL_DATABASE     | 数据库名          |
-| DINGTALK_WEBHOOK   | 钉钉 Webhook（可选） |
-| DINGTALK_SECRET    | 钉钉加签密钥（可选） |
-| EMAIL_HOST         | 邮件 SMTP（可选）  |
-| EMAIL_PORT         | 邮件端口（可选）   |
-| EMAIL_USER         | 邮箱账号（可选）   |
-| EMAIL_PASSWD       | 邮箱授权码（可选）  |
-| EMAIL_ADDRESSEE    | 收件人（可选）     |
+- PR 到 `master` 默认运行 `lint-and-collect`、`api-smoke`、`ui-smoke`。
+- PR 的 `api-smoke` 只做 API smoke 收集和 API 连通性检查，不执行数据库断言或数据库闭环。
+- `master` push 或 `workflow_dispatch` 可运行 `e2e-smoke`。
+- 建议 Required Checks 设置为 `lint-and-collect`、`api-smoke`、`ui-smoke`。
+- 不建议把 `e2e-smoke` 和 `performance-tests` 设为普通 PR Required Checks。
+- artifact 上传使用 `if: always()` 保留失败证据；测试步骤失败时 job 仍然失败，不使用 `continue-on-error` 掩盖结果。
+
+手动性能流水线策略：
+
+- 只能通过 `workflow_dispatch` 手动触发。
+- 输入包含 `environment`、`scenario`、`users`、`spawn_rate`、`run_time`。
+- `scenario` 只能是 `readonly`。
+- `users` 最大 `10`，`run_time` 最长 `5m`。
+- 正式执行前先跑 `1` 用户、`1m`、`readonly` 预检。
+- 预检失败不得继续升压。
+- 不执行写入类性能场景，不使用 `MYSQL_*` 做数据库闭环。
+- 使用并发锁 `jsh-erp-performance`，同一时间只允许一个性能任务运行。
+
+## GitHub Secrets
+
+建议配置的 Secrets：
+
+| Secret | 用途 |
+| --- | --- |
+| `ERP_API_URL` | 新质量门禁和性能流水线使用的 API 地址 |
+| `ERP_UI_URL` | 新质量门禁使用的 UI 地址 |
+| `ERP_USERNAME` | API/UI/E2E/性能测试账号 |
+| `ERP_PASSWORD` | API/UI/E2E/性能测试密码 |
+| `ERP_HOST` | 旧 API workflow 兼容字段；新 workflow 优先使用 `ERP_API_URL` / `ERP_UI_URL` |
+| `MYSQL_HOST` | E2E 或非 PR 数据库断言需要 |
+| `MYSQL_PORT` | E2E 或非 PR 数据库断言需要 |
+| `MYSQL_USERNAME` | E2E 或非 PR 数据库断言需要 |
+| `MYSQL_PASSWORD` | E2E 或非 PR 数据库断言需要 |
+| `MYSQL_DATABASE` | E2E 或非 PR 数据库断言需要 |
+
+暂不配置且不阻塞当前质量门禁的通知类 Secrets：
+
+- `DINGTALK_WEBHOOK`
+- `DINGTALK_SECRET`
+- `EMAIL_*`
 
 ## 快速开始
 
@@ -174,45 +185,33 @@ pytest -m smoke api
 git clone https://github.com/C0LUMN7/column-erp-testing.git
 cd column-erp-testing
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
-cp conf/config.ini.example conf/config.ini
+cp config/local.ini.example config/local.ini
 ```
 
-编辑 `conf/config.ini`，填写测试环境地址、数据库连接和通知配置。
-
-执行冒烟测试：
+填写 `config/local.ini` 或导出环境变量后，可先执行：
 
 ```bash
-python run.py api --suite smoke
+python run.py preflight
+python run.py api --collect-only
+python run.py ui --collect-only
+python run.py e2e --collect-only
 ```
 
-## 查看 Allure 报告
-
-```bash
-allure open ./reports/allure-report
-```
-
-或使用 Python HTTP 服务：
-
-```bash
-python -m http.server 8080 -d ./reports/allure-report
-```
-
-浏览器访问 `http://localhost:8080`。
-
-> 不要直接双击 `index.html` 打开，浏览器安全策略会阻止 JS 加载，导致页面一直 Loading。
+连接真实测试环境后，再按需要运行 API、UI、E2E 或只读性能命令。
 
 ## 注意事项
 
-- 不要在生产环境执行新增、修改、审核、付款、收款等有副作用的用例
-- GitHub Actions 真实接口测试建议手动触发，push 只做轻量检查，避免污染测试环境
-- `conf/config.ini`、`extract.yaml`、报告和日志不应提交到 Git
-- 数据库断言需要确保 MySQL 能被测试执行环境访问
-- 推荐优先使用 `python run.py api --suite <suite>`，它会自动处理 Allure 报告生成、环境信息注入和 CI 适配
+- 不要在生产环境执行会新增、修改、审核、付款、收款或影响库存的用例。
+- PR 质量门禁不跑数据库闭环，不依赖 `MYSQL_*` Secrets。
+- E2E 冒烟和完整数据库断言需要真实 MySQL 配置，并应在受控环境运行。
+- Locust 当前只用于只读性能基线，不能据此直接给出生产容量结论。
+- 报告、日志、`.runtime/auth/`、本地配置和登录态文件不应提交或上传为敏感 artifact。
 
-## 后续优化
+## 后续增强项
 
-- 引入测试数据工厂，进一步提升数据准备和清理能力
-- 增加更多参数异常、权限异常和并发场景
-- 后续可将 GitHub Actions 切换为 self-hosted runner 或 Jenkins，避免数据库暴露公网
+- 可后续补充更多稳定 UI 定位器和 ERP 页面用例。
+- 可后续扩展受控自托管 Runner，减少数据库公网暴露。
+- 可后续补充资源监控、阈值判定和性能趋势对比。
+- 可后续增加更多安全清理策略和异常中断补偿流程。
