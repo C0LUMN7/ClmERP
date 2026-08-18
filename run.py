@@ -1,11 +1,14 @@
 import argparse
+import platform
 import shutil
 import subprocess
 import sys
 import os
 import re
 import time
+import xml.etree.ElementTree as ET
 from conf.setting import REPORT_TYPE, ALLURE_HOST, ALLURE_PORT
+from config.settings import ERP_API_URL, ERP_UI_URL, SYSTEM
 
 
 def _is_ci() -> bool:
@@ -36,6 +39,7 @@ def _build_pytest_args(
     browser: str = '',
     headed: bool = False,
     collect_only: bool = False,
+    results_dir: str = '',
 ) -> list[str]:
     """按测试类型构建 pytest 参数：各类型使用独立用例目录和 Allure 结果目录。
 
@@ -44,13 +48,10 @@ def _build_pytest_args(
     """
     if test_type == 'api':
         target = './api/'
-        alluredir = './reports/allure-results/api'
     elif test_type == 'e2e':
         target = './e2e/'
-        alluredir = './reports/allure-results/e2e'
     else:
         target = './ui/'
-        alluredir = './reports/allure-results/ui'
 
     args = ['-s', '-v']
     if browser:
@@ -73,24 +74,26 @@ def _build_pytest_args(
     if collect_only:
         args.append('--collect-only')
         return args
+    if not results_dir:
+        results_dir = f'./reports/allure-results/{test_type}'
     args.extend([
-        f'--alluredir={alluredir}',
+        f'--alluredir={results_dir}',
         f'--junitxml=./reports/{test_type}_results.xml',
     ])
     return args
 
 
-def _generate_allure_report(test_type: str) -> str:
+def _generate_allure_report(test_type: str, results_dir: str, run_id: str) -> str:
     """将指定类型的 Allure 原始结果生成为 HTML 报告，返回报告目录。
 
     报告生成到带时间戳的唯一子目录（reports/allure-report/<类型>-<时间戳>），
     不覆盖、不清理任何已有报告目录，也不使用 --clean。
     """
-    report_dir = f'./reports/allure-report/{test_type}-{time.strftime("%Y%m%d-%H%M%S")}'
+    report_dir = f'./reports/allure-report/{test_type}-{run_id}'
     if os.path.exists(report_dir):
         # 同一秒内重复执行时追加进程号，保证目录不冲突
         report_dir = f'{report_dir}-{os.getpid()}'
-    cmd = f'allure generate ./reports/allure-results/{test_type} -o {report_dir}'
+    cmd = f'allure generate {results_dir} -o {report_dir}'
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:
         print('错误: Allure 命令执行失败，请确认 Allure 已正确安装并已添加到 PATH 环境变量')
@@ -99,23 +102,51 @@ def _generate_allure_report(test_type: str) -> str:
     return report_dir
 
 
+def _write_allure_environment(results_dir: str, test_type: str) -> None:
+    """为本次运行写入 Allure 环境信息。"""
+    os.makedirs(results_dir, exist_ok=True)
+    root = ET.Element('environment')
+    items = [
+        ('system', platform.platform()),
+        ('python version', platform.python_version()),
+        ('BaseUrl', ERP_API_URL.rstrip('/') if ERP_API_URL else '未配置'),
+        ('UIUrl', ERP_UI_URL.rstrip('/') if ERP_UI_URL else '未配置'),
+        ('environment', SYSTEM['environment']),
+        ('Project', f'{SYSTEM["name"]} 自动化测试框架'),
+        ('test type', test_type.upper()),
+    ]
+    for key, value in items:
+        parameter = ET.SubElement(root, 'parameter')
+        ET.SubElement(parameter, 'key').text = key
+        ET.SubElement(parameter, 'value').text = value
+    ET.indent(root, space='    ')
+    ET.ElementTree(root).write(
+        os.path.join(results_dir, 'environment.xml'),
+        encoding='utf-8',
+        xml_declaration=False,
+    )
+
+
 def run_suite(test_type: str, suite: str, browser: str = '', headed: bool = False, collect_only: bool = False) -> None:
     if REPORT_TYPE != 'allure':
         print('当前 REPORT_TYPE 不是 allure，跳过测试执行')
         sys.exit(0)
 
-    pytest_args = _build_pytest_args(test_type, suite, browser, headed, collect_only)
+    run_id = ''
+    results_dir = ''
+    if not collect_only:
+        run_id = f'{time.strftime("%Y%m%d-%H%M%S")}-{os.getpid()}'
+        results_dir = f'./reports/allure-results/{test_type}/{run_id}'
+
+    pytest_args = _build_pytest_args(test_type, suite, browser, headed, collect_only, results_dir)
     print(f'执行 pytest 参数: {" ".join(pytest_args)}')
     exit_code = pytest.main(pytest_args)
     if collect_only:
         sys.exit(exit_code)
 
-    env_xml = './conf/environment.xml'
-    results_dir = f'./reports/allure-results/{test_type}'
-    if os.path.exists(env_xml):
-        shutil.copy(env_xml, results_dir)
+    _write_allure_environment(results_dir, test_type)
 
-    report_dir = _generate_allure_report(test_type)
+    report_dir = _generate_allure_report(test_type, results_dir, run_id)
 
     if not _is_ci():
         subprocess.Popen(
