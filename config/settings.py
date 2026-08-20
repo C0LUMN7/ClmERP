@@ -14,6 +14,7 @@ _LOCAL_CONFIG = None
 _CONFIG_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _CONFIG_DIR.parent
 _LOCAL_CONFIG_PATH = _CONFIG_DIR / 'local.ini'
+# 仅作为历史本地配置兜底，不属于当前仓库展示结构；保留读取避免影响已有本地环境。
 _LEGACY_CONFIG_PATH = _REPO_ROOT / 'conf' / 'config.ini'
 
 # 日志、报告与接口超时配置
@@ -27,7 +28,7 @@ ALLURE_PORT = 0
 
 
 def _local_config():
-    """读取本地 config/local.ini；旧 conf/config.ini 仅作兼容兜底。"""
+    """读取本地 config/local.ini；历史 conf/config.ini 仅作本地兜底。"""
     global _LOCAL_CONFIG
     if _LOCAL_CONFIG is None:
         parser = configparser.ConfigParser()
@@ -114,7 +115,7 @@ for key, default in _BUSINESS_ID_DEFAULTS.items():
 
 
 def get_api_url():
-    """ERP API 地址：优先环境变量 ERP_API_URL，缺失时兼容本地 conf/config.ini
+    """ERP API 地址：优先环境变量 ERP_API_URL，缺失时读取本地配置兜底。
 
     统一 API 框架的地址读取入口，避免各执行器各自硬编码或重复读取配置。
     """

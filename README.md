@@ -36,7 +36,7 @@
 ## 项目结构
 
 ```text
-column-erp-testing/
+ClmERP/
 ├── .github/workflows/        # GitHub Actions workflow
 ├── api/                      # API 自动化用例、YAML、Schema 和统一执行器
 ├── ui/                       # Playwright UI 用例、fixture、页面对象
@@ -77,9 +77,16 @@ python run.py e2e --collect-only
 
 # 只读性能基线
 python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-time 1m
+
+# 显式发送通知
+python run.py notify --report reports/api_results.xml --channel email
+python run.py notify --report reports/api_results.xml --channel dingtalk
+python run.py notify --report reports/api_results.xml --channel all
 ```
 
 `performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
+
+`notify` 也必须显式执行，API/UI/E2E 默认执行完成后不会自动发送通知。通知依赖本地 `config/local.ini` 或环境变量中的钉钉、邮箱配置。
 
 ## 配置说明
 
@@ -179,8 +186,8 @@ python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-tim
 ## 快速开始
 
 ```bash
-git clone https://github.com/C0LUMN7/column-erp-testing.git
-cd column-erp-testing
+git clone https://github.com/C0LUMN7/ClmERP.git
+cd ClmERP
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
