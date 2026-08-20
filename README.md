@@ -37,6 +37,7 @@
 
 ```text
 column-erp-testing/
+├── .github/workflows/        # GitHub Actions workflow
 ├── api/                      # API 自动化用例、YAML、Schema 和统一执行器
 ├── ui/                       # Playwright UI 用例、fixture、页面对象
 ├── e2e/                      # API + UI + 数据库跨层冒烟
@@ -44,10 +45,6 @@ column-erp-testing/
 ├── shared/                   # API/UI/E2E 复用的客户端和数据库辅助方法
 ├── config/                   # 统一配置读取与配置模板
 ├── reports/                  # 统一运行产物（Git 忽略）
-├── base/                     # 兼容旧调用的执行入口
-├── common/                   # 请求、日志、数据库连接和动态数据工具
-├── testcase/ERP/             # 原接口项目用例保留目录
-├── .github/workflows/        # GitHub Actions workflow
 ├── run.py                    # 统一执行入口
 ├── pytest.ini                # pytest 配置与 marker
 └── requirements.txt          # 依赖清单

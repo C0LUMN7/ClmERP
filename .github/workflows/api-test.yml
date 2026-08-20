@@ -52,13 +52,15 @@ jobs:
       - name: Syntax check (py_compile)
         run: |
           python -m py_compile run.py
-          python -m py_compile conftest.py
-          python -m py_compile common/sendrequest.py
-          python -m py_compile common/readyaml.py
-          python -m py_compile common/assertions.py
-          python -m py_compile common/connection.py
-          python -m py_compile base/apiutil.py
-          python -m py_compile base/apiutil_business.py
+          python -m py_compile api/conftest.py
+          python -m py_compile api/framework/runner.py
+          python -m py_compile api/framework/http_client.py
+          python -m py_compile api/framework/legacy_yaml_store.py
+          python -m py_compile api/framework/assertions.py
+          python -m py_compile shared/database.py
+          python -m py_compile shared/debugtalk.py
+          python -m py_compile shared/logger.py
+          python -m py_compile shared/notification.py
 
       - name: Test collection check
         run: |
@@ -106,27 +108,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check ERP_HOST connectivity
+      - name: Check ERP API connectivity
         env:
-          ERP_HOST: ${{ secrets.ERP_HOST }}
+          ERP_API_URL: ${{ secrets.ERP_API_URL || secrets.ERP_HOST }}
         run: |
           python - <<'PY'
           import os, requests
-          host = os.environ.get("ERP_HOST", "")
+          host = os.environ.get("ERP_API_URL", "")
           if not host:
-              raise SystemExit("ERP_HOST is empty — check GitHub Secrets")
+              raise SystemExit("ERP_API_URL is empty — check GitHub Secrets")
           try:
               r = requests.get(host, timeout=10, verify=False)
-              print(f"ERP host reachable, status: {r.status_code}")
+              print(f"ERP API reachable, status: {r.status_code}")
           except Exception as e:
-              raise SystemExit(f"ERP host unreachable: {e}")
+              raise SystemExit(f"ERP API unreachable: {e}")
           PY
 
-      - name: Generate config.ini
+      - name: Generate local config
         run: |
-          cat > conf/config.ini <<EOF
+          cat > config/local.ini <<EOF
           [api_envi]
-          host = ${{ secrets.ERP_HOST }}
+          host = ${{ secrets.ERP_API_URL || secrets.ERP_HOST }}
+          ui_host = ${{ secrets.ERP_UI_URL }}
+
+          [LOGIN]
+          username = ${{ secrets.ERP_USERNAME }}
+          password = ${{ secrets.ERP_PASSWORD }}
 
           [MYSQL]
           host = ${{ secrets.MYSQL_HOST }}
@@ -163,6 +170,6 @@ jobs:
             reports/api_results.xml
             reports/allure-results/api/
             reports/allure-report/
-            logs/
+            reports/logs/
           retention-days: 30
           if-no-files-found: warn
