@@ -1,5 +1,5 @@
 import os
-from common.recordlog import logs
+from shared.logger import logs
 
 
 def remove_file(filepath, endlst):

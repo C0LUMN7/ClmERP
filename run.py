@@ -7,8 +7,7 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
-from conf.setting import REPORT_TYPE, ALLURE_HOST, ALLURE_PORT
-from config.settings import ERP_API_URL, ERP_UI_URL, SYSTEM
+from config.settings import ALLURE_HOST, ALLURE_PORT, ERP_API_URL, ERP_UI_URL, REPORT_TYPE, SYSTEM
 
 
 def _is_ci() -> bool:
@@ -246,14 +245,27 @@ def run_performance(users: int, spawn_rate: float, run_time: str, scenario: str)
     sys.exit(result.returncode)
 
 
+def run_notify(report: str, channel: str) -> None:
+    """显式发送测试报告通知。"""
+    from shared.notification import notify_report
+    try:
+        results = notify_report(report, channel=channel)
+    except Exception as e:
+        print(f'通知发送失败: {e}')
+        sys.exit(1)
+    for name, result in results:
+        print(f'{name} 通知发送结果: {result}')
+    sys.exit(0)
+
+
 if __name__ == '__main__':
     import pytest
 
     parser = argparse.ArgumentParser(description='ERP 自动化测试统一执行入口')
     parser.add_argument(
         'test_type',
-        choices=['api', 'ui', 'e2e', 'preflight', 'performance'],
-        help='测试类型: api(接口) / ui(UI) / e2e(跨层闭环) / preflight(环境预检) / performance(性能骨架)',
+        choices=['api', 'ui', 'e2e', 'preflight', 'performance', 'notify'],
+        help='测试类型: api(接口) / ui(UI) / e2e(跨层闭环) / preflight(环境预检) / performance(性能骨架) / notify(显式通知)',
     )
     parser.add_argument(
         '--suite',
@@ -301,14 +313,32 @@ if __name__ == '__main__':
         default=None,
         help='性能场景（仅对 performance 有效；当前仅保留只读骨架）',
     )
+    parser.add_argument(
+        '--report',
+        default=None,
+        help='报告路径（仅对 notify 有效，例如 reports/api_results.xml 或 reports/allure-report/...）',
+    )
+    parser.add_argument(
+        '--channel',
+        choices=['all', 'dingtalk', 'email'],
+        default=None,
+        help='通知渠道（仅对 notify 有效，默认 all）',
+    )
     args = parser.parse_args()
 
     performance_args = any(value is not None for value in (args.users, args.spawn_rate, args.run_time, args.scenario))
+    notify_args = any(value is not None for value in (args.report, args.channel))
     if args.test_type != 'performance' and performance_args:
         parser.error('--users / --spawn-rate / --run-time / --scenario 仅对 performance 命令有效')
+    if args.test_type != 'notify' and notify_args:
+        parser.error('--report / --channel 仅对 notify 命令有效')
     if args.test_type == 'performance' and args.collect_only:
         parser.error('--collect-only 仅对 api/ui/e2e 命令有效')
     if args.test_type == 'performance' and args.suite != 'all':
+        parser.error('--suite 仅对 api/ui/e2e 命令有效')
+    if args.test_type == 'notify' and args.collect_only:
+        parser.error('--collect-only 仅对 api/ui/e2e 命令有效')
+    if args.test_type == 'notify' and args.suite != 'all':
         parser.error('--suite 仅对 api/ui/e2e 命令有效')
     if args.test_type in ('ui', 'e2e') and args.suite not in ('smoke', 'all'):
         # 页面和跨层套件范围保持明确，不会误触发其它测试类型或性能任务
@@ -328,5 +358,9 @@ if __name__ == '__main__':
             args.scenario or 'readonly',
         )
         sys.exit(0)
+    if args.test_type == 'notify':
+        if not args.report:
+            parser.error('notify 命令必须提供 --report')
+        run_notify(args.report, args.channel or 'all')
 
     run_suite(args.test_type, args.suite, args.browser or '', args.headed, args.collect_only)

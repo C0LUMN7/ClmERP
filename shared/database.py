@@ -1,20 +1,9 @@
-import traceback
-
+# -*- coding: utf-8 -*-
+"""MySQL 连接封装。"""
 import pymysql
+
+from config import settings
 from shared.logger import logs
-
-
-def _mysql_option(option):
-    """MySQL 配置由 config/settings.py 统一读取：环境变量优先，config/local.ini 兜底。"""
-    from config import settings
-    values = {
-        'host': settings.MYSQL_HOST,
-        'port': settings.MYSQL_PORT,
-        'username': settings.MYSQL_USERNAME,
-        'password': settings.MYSQL_PASSWORD,
-        'database': settings.MYSQL_DATABASE,
-    }
-    return values[option]
 
 
 class ConnectMysql:
@@ -22,13 +11,12 @@ class ConnectMysql:
     def __init__(self):
         self.conn = None
         self.cursor = None
-
         mysql_conf = {
-            'host': _mysql_option('host'),
-            'port': int(_mysql_option('port')),
-            'user': _mysql_option('username'),
-            'password': _mysql_option('password'),
-            'database': _mysql_option('database')
+            'host': settings.MYSQL_HOST,
+            'port': int(settings.MYSQL_PORT),
+            'user': settings.MYSQL_USERNAME,
+            'password': settings.MYSQL_PASSWORD,
+            'database': settings.MYSQL_DATABASE,
         }
 
         try:
@@ -62,13 +50,10 @@ class ConnectMysql:
             self.cursor.execute(sql)
             self.conn.commit()
             res = self.cursor.fetchall()
-
             values = []
-            for ite in res:
-                values.append(list(ite.values()))
-
+            for item in res:
+                values.append(list(item.values()))
             return values
-
         except Exception as e:
             logs.error(e)
         finally:

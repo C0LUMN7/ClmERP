@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """模板变量解析：解析 YAML 中的 ${function(args)} 动态表达式
 
-- 表达式函数来自 common/debugtalk.py（DebugTalk）
+- 表达式函数来自 shared/debugtalk.py（DebugTalk）
 - get_extract_data() 优先读取当前会话运行上下文，缺失时兼容旧 extract.yaml
 - 循环、复杂计算、签名、业务校验等逻辑由 Python 实现，不进入 YAML
 - 记录本次解析使用过的表达式，供失败时定位变量来源
 """
 import re
 
-from common.debugtalk import DebugTalk
+from shared.debugtalk import DebugTalk
 
 _EXPR_PATTERN = re.compile(r'\$\{([^}]*)\}')
 

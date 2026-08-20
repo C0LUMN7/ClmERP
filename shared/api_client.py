@@ -9,7 +9,7 @@ import time
 import requests
 import urllib3
 
-from common.debugtalk import DebugTalk
+from shared.debugtalk import DebugTalk
 from config.settings import ERP_PASSWORD, ERP_USERNAME, get_api_url
 
 

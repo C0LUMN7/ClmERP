@@ -3,8 +3,8 @@ import allure
 import jsonpath
 import operator
 
-from common.recordlog import logs
-from common.connection import ConnectMysql
+from shared.logger import logs
+from shared.database import ConnectMysql
 
 
 class Assertions:

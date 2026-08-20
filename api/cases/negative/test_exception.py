@@ -7,9 +7,9 @@ urllib3.disable_warnings()
 
 from api.framework.yaml_loader import load_case_pairs
 from api.framework.runner import run_case
-from common.connection import ConnectMysql
-from common.debugtalk import DebugTalk
-from base.generateId import m_id, c_id
+from shared.database import ConnectMysql
+from shared.debugtalk import DebugTalk
+from shared.test_data import m_id, c_id
 from config.settings import get_api_url
 
 

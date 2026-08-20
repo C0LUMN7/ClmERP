@@ -2,7 +2,7 @@
 """跨层用例使用的数据库查询与本轮数据清理工具。"""
 from decimal import Decimal
 
-from common.connection import ConnectMysql
+from shared.database import ConnectMysql
 from config.settings import BUSINESS_IDS
 
 

@@ -129,7 +129,7 @@ class SendRequest:
     def _relogin(self):
         """重新登录获取新token（登录凭据从 config/settings.py 环境变量读取）"""
         from config.settings import ERP_USERNAME, ERP_PASSWORD, get_api_url
-        from common.debugtalk import DebugTalk
+        from shared.debugtalk import DebugTalk
         if not ERP_USERNAME or not ERP_PASSWORD:
             logs.error('登录凭据未配置：请通过环境变量 ERP_USERNAME / ERP_PASSWORD 提供测试账号密码')
             return None

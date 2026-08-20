@@ -152,7 +152,7 @@ def _cleanup_ui_run_data(run_id: str) -> None:
         return
 
     # 延迟导入：仅清理执行时加载，用例收集阶段不产生任何副作用
-    from common.connection import ConnectMysql
+    from shared.database import ConnectMysql
     conn = ConnectMysql()
     if not conn.conn or not conn.cursor:
         print('[UI 后置清理] 跳过：MySQL 连接失败')

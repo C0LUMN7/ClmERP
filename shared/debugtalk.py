@@ -7,17 +7,20 @@ import random
 import re
 import time
 from hashlib import sha1
-from conf.setting import DIR_BASE
+from pathlib import Path
+
+from api.framework.legacy_yaml_store import LegacyYamlStore
 from pandas.tseries.offsets import Day
-from common.readyaml import ReadYamlData
 import csv
+
+DIR_BASE = Path(__file__).resolve().parent.parent
 
 
 class DebugTalk:
     _captcha_data = None
 
     def __init__(self):
-        self.read = ReadYamlData()
+        self.legacy_store = LegacyYamlStore()
 
     def get_extract_data(self, node_name, randoms=None) -> str:
         """
@@ -30,7 +33,7 @@ class DebugTalk:
         context = get_run_context()
         if node_name in context:
             return self._pick_context_value(context.get(node_name), randoms)
-        data = self.read.get_extract_yaml(node_name)
+        data = self.legacy_store.get_extract_yaml(node_name)
         if data is None:
             raise KeyError(f'运行上下文缺少变量 {node_name}（变量来源：当前会话接口提取结果或旧 extract.yaml）')
         if randoms is not None and bool(re.compile(r'^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$').match(randoms)):
@@ -43,7 +46,7 @@ class DebugTalk:
             }
             data = data_value[randoms]
         else:
-            data = self.read.get_extract_yaml(node_name, randoms)
+            data = self.legacy_store.get_extract_yaml(node_name, randoms)
         return data
 
     @staticmethod
@@ -302,10 +305,8 @@ class DebugTalk:
             return user_lst[0], passwd_lst[0]
 
     def get_baseurl(self, host):
-        from conf.operationConfig import OperationConfig
-        conf = OperationConfig()
-        url = conf.get_section_for_data('api_envi', host)
-        return url
+        from config.settings import get_api_url
+        return get_api_url()
 
     _fixed_ts = None
 
@@ -335,7 +336,7 @@ class DebugTalk:
         from config.settings import get_api_url
         context = get_run_context()
         host = get_api_url()
-        token = context.get('token') if 'token' in context else self.read.get_extract_yaml('token')
+        token = context.get('token') if 'token' in context else self.legacy_store.get_extract_yaml('token')
         headers = {"X-Access-Token": token, "Content-Type": "application/json;charset=UTF-8"}
         r = req.get(host + '/material/getMaxBarCode', headers=headers)
         if r.text and r.text.strip() == 'loginOut':

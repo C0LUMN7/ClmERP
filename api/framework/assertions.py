@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """响应与数据库断言
 
-支持与旧 common/assertions.py 相同的 YAML 断言类型：
+支持既有 YAML 断言类型：
 - contains: 响应字段包含断言（支持 status_code）
 - eq / ne: 响应相等 / 不相等断言
 - rv: 响应任意值断言
@@ -17,8 +17,8 @@ import os
 import allure
 import jsonpath
 
-from common.connection import ConnectMysql
-from common.recordlog import logs
+from shared.database import ConnectMysql
+from shared.logger import logs
 
 
 class Assertions:

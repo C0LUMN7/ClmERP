@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """统一 API 执行器：单接口 run_case 与多步骤业务场景 run_scenario
 
-合并旧 base/apiutil.py（单条用例）与 base/apiutil_business.py（多步骤场景）的重复能力：
+合并旧单接口执行器与多步骤场景执行器的重复能力：
 - YAML 模板变量解析（api/framework/template.py）
-- HTTP 请求发送（复用 common/sendrequest.py）
+- HTTP 请求发送（复用 api/framework/http_client.py）
 - Token 过期自动重新登录（登录凭据来自 config/settings.py 环境变量，不写死账号密码）
 - 响应字段提取，写入会话运行上下文（api/framework/yaml_loader.py）
 - 响应与数据库断言（api/framework/assertions.py）
@@ -19,9 +19,9 @@ import allure
 import jsonpath
 import requests
 
-from common.debugtalk import DebugTalk
-from common.recordlog import logs
-from common.sendrequest import SendRequest, _mask_response_text, _mask_sensitive, _SENSITIVE_KEYS
+from shared.debugtalk import DebugTalk
+from shared.logger import logs
+from api.framework.http_client import SendRequest, _mask_response_text, _mask_sensitive, _SENSITIVE_KEYS
 from config.settings import ERP_PASSWORD, ERP_USERNAME, get_api_url
 from api.framework.assertions import Assertions
 from api.framework.template import TemplateResolver

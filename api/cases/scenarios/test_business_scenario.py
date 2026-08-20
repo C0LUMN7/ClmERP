@@ -2,7 +2,7 @@ import allure
 import pytest
 
 from api.framework.runner import run_scenario_file
-from base.generateId import m_id, c_id
+from shared.test_data import m_id, c_id
 
 
 @allure.feature(next(m_id) + 'ERP进销存-业务场景-采购入库核心链路')

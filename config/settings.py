@@ -6,6 +6,7 @@
 - 提供基础 preflight 环境预检：对已配置项给出明确结果，缺失项标记待配置，不伪造通过
 """
 import configparser
+import logging
 import os
 from pathlib import Path
 
@@ -14,6 +15,15 @@ _CONFIG_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _CONFIG_DIR.parent
 _LOCAL_CONFIG_PATH = _CONFIG_DIR / 'local.ini'
 _LEGACY_CONFIG_PATH = _REPO_ROOT / 'conf' / 'config.ini'
+
+# 日志、报告与接口超时配置
+LOG_LEVEL = logging.DEBUG
+STREAM_LOG_LEVEL = logging.DEBUG
+LOG_DIR = _REPO_ROOT / 'reports' / 'logs'
+API_TIMEOUT = 60
+REPORT_TYPE = 'allure'
+ALLURE_HOST = '127.0.0.1'
+ALLURE_PORT = 0
 
 
 def _local_config():
@@ -69,6 +79,15 @@ MYSQL_PORT = _env_or_config('MYSQL_PORT', 'MYSQL', 'port', '3306')
 MYSQL_USERNAME = _env_or_config('MYSQL_USERNAME', 'MYSQL', 'username', '')
 MYSQL_PASSWORD = _env_or_config('MYSQL_PASSWORD', 'MYSQL', 'password', '')
 MYSQL_DATABASE = _env_or_config('MYSQL_DATABASE', 'MYSQL', 'database', '')
+
+# 显式通知配置（环境变量优先，本地 config/local.ini 兜底）
+DINGTALK_WEBHOOK = _env_or_config('DINGTALK_WEBHOOK', 'DINGTALK', 'webhook', '')
+DINGTALK_SECRET = _env_or_config('DINGTALK_SECRET', 'DINGTALK', 'secret', '')
+EMAIL_HOST = _env_or_config('EMAIL_HOST', 'EMAIL', 'host', '')
+EMAIL_USER = _env_or_config('EMAIL_USER', 'EMAIL', 'user', '')
+EMAIL_PASSWORD = _env_or_config('EMAIL_PASSWORD', 'EMAIL', 'passwd', '')
+EMAIL_ADDRESSEE = _env_or_config('EMAIL_ADDRESSEE', 'EMAIL', 'addressee', '')
+EMAIL_SUBJECT = _env_or_config('EMAIL_SUBJECT', 'EMAIL', 'subject', 'ERP 自动化测试结果')
 
 # 核心业务 ID（商品分类/仓库/供应商/客户/结算账户/财务账户）
 # 优先通过环境变量注入；未设置时使用当前 cloud_test 环境的默认示例值，

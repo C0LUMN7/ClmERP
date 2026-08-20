@@ -15,7 +15,7 @@ python run.py performance --users 1 --spawn-rate 1 --run-time 1m --scenario read
 
 只读接口来源：
 
-- `/user/login`：来自现有 `api/login.yaml`、`shared/api_client.py` 和 `common/debugtalk.py`。
+- `/user/login`：来自现有 `api/login.yaml`、`shared/api_client.py` 和 `shared/debugtalk.py`。
 - `/material/list`：来自现有 `api/cases/goods/goods_read.yaml`。
 - `/material/getListWithStock`：来自 jshERP 商品库存页面 `MaterialStock.vue` 的只读列表接口。
 - `/depotHead/list`：来自 jshERP 单据列表页面的只读列表接口；现有 API 用例也已使用同一

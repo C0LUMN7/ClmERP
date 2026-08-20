@@ -14,9 +14,9 @@ import time
 import pytest
 import allure
 
-from common.recordlog import logs
-from common.debugtalk import DebugTalk
-from common.connection import ConnectMysql
+from shared.logger import logs
+from shared.debugtalk import DebugTalk
+from shared.database import ConnectMysql
 from api.framework.yaml_loader import load_case_pairs, reset_run_context
 from api.framework.runner import run_case
 

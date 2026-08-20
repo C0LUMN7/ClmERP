@@ -2,7 +2,7 @@ import allure
 import pytest
 from api.framework.yaml_loader import load_case_pairs
 from api.framework.runner import run_case
-from base.generateId import m_id, c_id
+from shared.test_data import m_id, c_id
 
 
 @allure.feature(next(m_id) + 'ERP进销存-商品管理（单接口）')
