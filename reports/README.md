@@ -5,5 +5,5 @@
 - `allure-results/` — API、UI 的 Allure 原始结果
 - `allure-report/` — 合并生成的 Allure HTML 报告
 - `playwright/` — 截图、视频和 Trace（不含登录状态）
-- `locust/` — Locust HTML/CSV 与资源指标（后续）
+- `locust/` — Locust HTML/CSV 和运行日志
 - `logs/` — 运行日志

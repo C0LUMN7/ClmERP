@@ -6,8 +6,8 @@
   - context 由官方插件为每条用例创建并关闭独立 BrowserContext，用例间互不污染
 - 登录状态复用（storage_state）：
   - session 内登录一次并保存到 .runtime/auth/（Git 忽略，不进入报告/Allure/日志）
-  - 后续用例的 context 自动加载登录状态；登录冒烟用例使用不加载状态的新 context
-  - 本阶段不自动清理状态文件：只依赖 .gitignore 保证不提交，不做任何删除操作
+  - 业务用例的 context 自动加载登录状态；登录冒烟用例使用不加载状态的新 context
+  - 状态文件不自动清理：只依赖 .gitignore 保证不提交，不做任何删除操作
 - 调试产物：截图、视频、Trace 由官方插件写入 --output（run.py ui 默认
   reports/playwright）；失败时把非敏感截图与 Trace 附加到 Allure，
   storage_state 永不进入 reports/ 或 Allure 附件
@@ -37,7 +37,7 @@ from ui.pages.login_page import LoginPage
 
 _AUTH_DIR = Path(__file__).resolve().parent.parent / ".runtime" / "auth"
 
-# 上下文统一参数：固定视口 + 忽略 HTTPS 证书错误（沿用 P0 从 playwright-ui 迁移的参数）
+# 浏览器上下文统一参数：固定视口 + 忽略 HTTPS 证书错误
 _CONTEXT_ARGS: Dict = {
     "viewport": {"width": 1920, "height": 1080},
     "ignore_https_errors": True,
@@ -45,7 +45,7 @@ _CONTEXT_ARGS: Dict = {
 
 
 def pytest_runtest_call(item):
-    """动态添加 Allure feature/title（沿用从 playwright-ui 根 conftest 迁移的报告规范）"""
+    """动态添加 Allure feature/title，保持报告分类清晰"""
     if item.parent._obj.__doc__:
         allure.dynamic.feature(item.parent._obj.__doc__)
     if item.function.__doc__:
@@ -93,7 +93,7 @@ def login_state_path(browser):
     """session 内登录一次，把 storage_state 保存到 .runtime/auth/。
 
     状态文件只写入 Git 忽略目录，由 .gitignore 保证不提交；
-    本阶段不执行任何删除或清理操作，文件内容不进入报告、Allure 或日志。
+    文件内容不进入报告、Allure 或日志。
     """
     _AUTH_DIR.mkdir(parents=True, exist_ok=True)
     state_file = _AUTH_DIR / f"ui-login-{time.strftime('%Y%m%d-%H%M%S')}.json"
@@ -151,7 +151,7 @@ def _cleanup_ui_run_data(run_id: str) -> None:
         print('[UI 后置清理] 跳过：MySQL 配置缺失（MYSQL_* 环境变量或 config/local.ini [MYSQL]）')
         return
 
-    # 延迟导入：仅清理执行时加载，用例收集阶段不产生任何副作用
+    # 延迟导入：仅清理执行时加载，collect-only 时不产生任何副作用
     from shared.database import ConnectMysql
     conn = ConnectMysql()
     if not conn.conn or not conn.cursor:
