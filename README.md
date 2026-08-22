@@ -2,55 +2,27 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org)
 [![pytest](https://img.shields.io/badge/pytest-9.0+-green.svg)](https://pytest.org)
-[![Playwright](https://img.shields.io/badge/Playwright-pytest--playwright-brightgreen.svg)](https://playwright.dev/python/)
-[![Allure](https://img.shields.io/badge/Allure-report-orange.svg)](https://allurereport.org)
-[![Locust](https://img.shields.io/badge/Locust-readonly-red.svg)](https://locust.io)
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue.svg)](https://github.com/features/actions)
+[![pytest-playwright](https://img.shields.io/badge/pytest--playwright-0.9+-brightgreen.svg)](https://playwright.dev/python/)
+[![allure-pytest](https://img.shields.io/badge/allure--pytest-2.13.5+-orange.svg)](https://allurereport.org)
+[![Locust](https://img.shields.io/badge/Locust-2.31+-red.svg)](https://locust.io)
+[![requests](https://img.shields.io/badge/requests-2.31+-blue.svg)](https://requests.readthedocs.io/)
 
-本项目面向开源进销存系统 **jshERP**，整合 API 自动化、Playwright UI 自动化、跨层 E2E 冒烟和 Locust 只读性能基线。仓库以真实接口 YAML、真实页面操作和显式运行入口为核心，适合用于 ERP 自动化测试框架实践、项目展示和面试讲解。
-
-文档只描述仓库已有能力和执行边界；未在本仓库实现或未接入真实环境验证的内容，不会标记为已通过。
+本项目是基于进销存系统 **jshERP** 的全方位自动化测试框架，覆盖接口自动化、UI 自动化、E2E 和性能测试。适用于测试工程师对自动化测试框架进行实践、求职面试展示或学习参考。
 
 ## 目录
 
-- [被测系统](#被测系统)
-- [设计亮点](#设计亮点)
-- [技术栈](#技术栈)
-- [项目结构](#项目结构)
-- [技术架构](#技术架构)
-- [测试类型详解](#测试类型详解)
-- [统一入口](#统一入口)
-- [配置说明](#配置说明)
-- [测试报告](#测试报告)
-- [GitHub Actions](#github-actions)
-- [GitHub Secrets](#github-secrets)
-- [快速开始](#快速开始)
-- [注意事项](#注意事项)
-- [能力边界](#能力边界)
-- [License](#license)
+- [技术栈](#-技术栈)
+- [项目结构](#-项目结构)
+- [技术架构](#-技术架构)
+- [测试类型详解](#-测试类型详解)
+- [设计亮点](#-设计亮点)
+- [配置说明](#-配置说明)
+- [测试报告](#-测试报告)
+- [CI/CD 流水线](#-cicd-流水线)
+- [快速开始](#-快速开始)
+- [License](#-license)
 
-## 被测系统
-
-| 项 | 值 |
-| --- | --- |
-| system.name | jshERP |
-| repository | https://github.com/jishenghua/jshERP |
-| environment | cloud_test（可通过 `ERP_ENV` 切换） |
-| deployed_version | 管伊佳ERP V3.6 或通过 `ERP_VERSION` 覆盖 |
-
-## 设计亮点
-
-| 特性 | 说明 |
-| --- | --- |
-| 真实接口基线 | API 用例复用 jshERP 真实 YAML，覆盖商品、仓库、采购、销售、异常边界和采购/销售业务链路 |
-| 统一 API 执行器 | 支持单接口用例和多步骤业务场景，失败信息定位到 YAML、用例、请求、断言和变量来源 |
-| Playwright 页面自动化 | 使用官方 `pytest-playwright`，按 Page Object 组织登录、采购转入库、销售转出库等 ERP 页面冒烟用例 |
-| 跨层闭环校验 | E2E 用例串联 UI 操作、API 查询和数据库校验，覆盖采购入库与销售出库链路 |
-| 只读性能基线 | Locust 仅执行登录、商品列表、库存列表和单据列表等只读请求，不混入写入类压测 |
-| 运行入口收敛 | 根目录 `run.py` 统一承接 API、UI、E2E、环境预检、性能和通知命令 |
-| 报告产物隔离 | API/UI/E2E 使用分目录 Allure 原始结果，UI/E2E 输出截图、视频和 Trace，性能输出 HTML、CSV 和日志 |
-
-## 技术栈
+## 🛠 技术栈
 
 | 技术/工具 | 作用 |
 | --- | --- |
@@ -62,7 +34,7 @@
 | Locust | 只读性能基线与 HTML/CSV 输出 |
 | GitHub Actions | 质量检查与手动性能流水线 |
 
-## 项目结构
+## 📁 项目结构
 
 ```text
 ClmERP/
@@ -79,7 +51,7 @@ ClmERP/
 └── requirements.txt          # 依赖清单
 ```
 
-## 技术架构
+## 🏗 技术架构
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -112,7 +84,7 @@ ClmERP/
             └──────────────┘
 ```
 
-## 测试类型详解
+## 📊 测试类型详解
 
 ### API 自动化
 
@@ -146,45 +118,19 @@ ClmERP/
 
 性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
 
-## 统一入口
+## ✨ 设计亮点
 
-```bash
-# 环境预检
-python run.py preflight
+| 特性 | 说明 |
+| --- | --- |
+| 真实接口基线 | API 用例复用 jshERP 真实 YAML，覆盖商品、仓库、采购、销售、异常边界和采购/销售业务链路 |
+| 统一 API 执行器 | 支持单接口用例和多步骤业务场景，失败信息定位到 YAML、用例、请求、断言和变量来源 |
+| Playwright 页面自动化 | 使用官方 `pytest-playwright`，按 Page Object 组织登录、采购转入库、销售转出库等 ERP 页面冒烟用例 |
+| 跨层闭环校验 | E2E 用例串联 UI 操作、API 查询和数据库校验，覆盖采购入库与销售出库链路 |
+| 只读性能基线 | Locust 仅执行登录、商品列表、库存列表和单据列表等只读请求，不混入写入类压测 |
+| 运行入口收敛 | 根目录 `run.py` 统一承接 API、UI、E2E、环境预检、性能和通知命令 |
+| 报告产物隔离 | API/UI/E2E 使用分目录 Allure 原始结果，UI/E2E 输出截图、视频和 Trace，性能输出 HTML、CSV 和日志 |
 
-# API
-python run.py api --suite smoke
-python run.py api --suite single
-python run.py api --suite business
-python run.py api --suite negative
-python run.py api --suite all
-python run.py api --collect-only
-
-# UI
-python run.py ui --suite smoke
-python run.py ui --suite all
-python run.py ui --browser chromium --headed
-python run.py ui --collect-only
-
-# E2E
-python run.py e2e --suite smoke
-python run.py e2e --suite all
-python run.py e2e --collect-only
-
-# 只读性能基线
-python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-time 1m
-
-# 显式发送通知
-python run.py notify --report reports/api_results.xml --channel email
-python run.py notify --report reports/api_results.xml --channel dingtalk
-python run.py notify --report reports/api_results.xml --channel all
-```
-
-`performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
-
-`notify` 也必须显式执行，API/UI/E2E 默认执行完成后不会自动发送通知。通知依赖本地 `config/local.ini` 或环境变量中的钉钉、邮箱配置。
-
-## 配置说明
+## ⚙ 配置说明
 
 本地优先使用环境变量或 `config/local.ini`；模板见 `config/local.ini.example` 和 `config/environments.yaml.example`。敏感信息不要写入代码、YAML、报告或提交记录。
 
@@ -212,7 +158,7 @@ python run.py notify --report reports/api_results.xml --channel all
 | `ERP_UI_LOGIN_SUCCESS_KIND` | UI 登录成功判断方式：`url` / `title` / `text` |
 | `ERP_UI_LOGIN_SUCCESS_VALUE` | UI 登录成功判断值 |
 
-## 测试报告
+## 📈 测试报告
 
 | 产物 | 路径 |
 | --- | --- |
@@ -226,7 +172,7 @@ python run.py notify --report reports/api_results.xml --channel all
 
 `.runtime/auth/` 只用于 Playwright 登录态，不属于报告目录，不应上传为 artifact。
 
-## GitHub Actions
+## 🔄 CI/CD 流水线
 
 当前仓库包含三个 workflow 文件：
 
@@ -236,7 +182,7 @@ python run.py notify --report reports/api_results.xml --channel all
 | `.github/workflows/quality-gate.yml` | API/UI/E2E 质量检查 |
 | `.github/workflows/performance-tests.yml` | 手动只读性能流水线 |
 
-质量检查策略：
+### 质量检查策略
 
 - PR 到 `master` 默认运行 `lint-and-collect`、`api-smoke`、`ui-smoke`。
 - PR 的 `api-smoke` 只做 API smoke 收集和 API 连通性检查，不执行数据库断言或数据库闭环。
@@ -246,7 +192,7 @@ python run.py notify --report reports/api_results.xml --channel all
 - 不建议把 `e2e-smoke` 和 `performance-tests` 设为普通 PR Required Checks。
 - artifact 上传使用 `if: always()` 保留失败证据；测试步骤失败时 job 仍然失败，不使用 `continue-on-error` 掩盖结果。
 
-手动性能流水线策略：
+### 手动性能流水线策略
 
 - 只能通过 `workflow_dispatch` 手动触发。
 - 输入包含 `environment`、`scenario`、`users`、`spawn_rate`、`run_time`。
@@ -257,9 +203,9 @@ python run.py notify --report reports/api_results.xml --channel all
 - 不执行写入类性能场景，不使用 `MYSQL_*` 做数据库闭环。
 - 使用并发锁 `jsh-erp-performance`，同一时间只允许一个性能任务运行。
 
-## GitHub Secrets
+### GitHub Secrets
 
-建议配置的 Secrets：
+建议配置的仓库 Secrets：
 
 | Secret | 用途 |
 | --- | --- |
@@ -280,7 +226,9 @@ python run.py notify --report reports/api_results.xml --channel all
 - `DINGTALK_SECRET`
 - `EMAIL_*`
 
-## 快速开始
+## 🚀 快速开始
+
+### 环境准备
 
 ```bash
 git clone https://github.com/C0LUMN7/ClmERP.git
@@ -288,10 +236,24 @@ cd ClmERP
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+执行会生成 Allure HTML 的 API/UI/E2E 命令前，需要本机已安装 Allure CLI 并加入 `PATH`。
+运行 UI/E2E 前还需要安装对应浏览器；默认 Chromium 可执行：
+
+```bash
+python -m playwright install chromium
+```
+
+### 配置环境
+
+```bash
 cp config/local.ini.example config/local.ini
 ```
 
-填写 `config/local.ini` 或导出环境变量后，可先执行：
+填写 `config/local.ini` 或导出环境变量。
+
+### 收集检查
 
 ```bash
 python run.py preflight
@@ -300,28 +262,38 @@ python run.py ui --collect-only
 python run.py e2e --collect-only
 ```
 
-连接真实测试环境后，再按需要运行 API、UI、E2E 或只读性能命令。执行会生成
-Allure HTML 的 API/UI/E2E 命令前，需要本机已安装 Allure CLI 并加入 `PATH`。
-运行 UI/E2E 前还需要安装对应浏览器；默认 Chromium 可执行：
+### 运行命令
 
 ```bash
-python -m playwright install chromium
+# API
+python run.py api --suite smoke
+python run.py api --suite single
+python run.py api --suite business
+python run.py api --suite negative
+python run.py api --suite all
+
+# UI
+python run.py ui --suite smoke
+python run.py ui --suite all
+python run.py ui --browser chromium --headed
+
+# E2E
+python run.py e2e --suite smoke
+python run.py e2e --suite all
+
+# 只读性能基线
+python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-time 1m
+
+# 显式发送通知
+python run.py notify --report reports/api_results.xml --channel email
+python run.py notify --report reports/api_results.xml --channel dingtalk
+python run.py notify --report reports/api_results.xml --channel all
 ```
 
-## 注意事项
+`performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
 
-- 不要在生产环境执行会新增、修改、审核、付款、收款或影响库存的用例。
-- PR 质量检查不跑数据库闭环，不依赖 `MYSQL_*` Secrets。
-- E2E 冒烟、完整数据库断言和只读性能基线依赖真实 ERP、测试数据库和稳定业务数据，适合作为本地或手动 CI 验收执行。
-- Locust 当前只用于只读性能基线，不能据此直接给出生产容量结论。
-- 报告、日志、`.runtime/auth/`、本地配置和登录态文件不应提交或上传为敏感 artifact。
+`notify` 也必须显式执行，API/UI/E2E 默认执行完成后不会自动发送通知。通知依赖本地 `config/local.ini` 或环境变量中的钉钉、邮箱配置。
 
-## 能力边界
+## 📝 License
 
-- UI 和 E2E 用例依赖真实 jshERP 页面、账号、业务 ID 和测试数据库配置；资料缺失时不会用猜测定位器冒充通过。
-- 性能入口只覆盖只读 Locust 请求，输出 HTML、CSV 和日志；不包含资源监控、阈值判定或趋势分析。
-- PR 质量检查以收集、连通性和轻量冒烟为主；完整业务闭环由本地或手动 CI 在受控测试环境执行。
-
-## License
-
-MIT
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件，仅供学习和求职展示使用。
