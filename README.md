@@ -1,4 +1,4 @@
-# jshERP ERP 自动化测试框架
+# AutoERP 自动化测试框架
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org)
 [![pytest](https://img.shields.io/badge/pytest-9.0+-green.svg)](https://pytest.org)
@@ -37,7 +37,7 @@
 ## 📁 项目结构
 
 ```text
-ClmERP/
+AutoERP/
 ├── .github/workflows/        # GitHub Actions workflow
 ├── api/                      # API 自动化用例、YAML、Schema 和统一执行器
 ├── ui/                       # Playwright UI 用例、fixture、页面对象
@@ -231,8 +231,8 @@ ClmERP/
 ### 环境准备
 
 ```bash
-git clone https://github.com/C0LUMN7/ClmERP.git
-cd ClmERP
+git clone https://github.com/C0LUMN7/AutoERP.git
+cd AutoERP
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
