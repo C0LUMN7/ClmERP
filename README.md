@@ -2,10 +2,10 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org)
 [![pytest](https://img.shields.io/badge/pytest-9.0+-green.svg)](https://pytest.org)
-[![pytest-playwright](https://img.shields.io/badge/pytest--playwright-0.9+-brightgreen.svg)](https://playwright.dev/python/)
-[![allure-pytest](https://img.shields.io/badge/allure--pytest-2.13.5+-orange.svg)](https://allurereport.org)
+[![Playwright](https://img.shields.io/badge/Playwright-1.x-brightgreen.svg)](https://playwright.dev/python/)
+[![Allure](https://img.shields.io/badge/Allure-2.13+-orange.svg)](https://allurereport.org)
 [![Locust](https://img.shields.io/badge/Locust-2.31+-red.svg)](https://locust.io)
-[![requests](https://img.shields.io/badge/requests-2.31+-blue.svg)](https://requests.readthedocs.io/)
+[![CI GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-blue.svg)](https://github.com/features/actions)
 
 本项目是基于进销存系统 **jshERP** 的全方位自动化测试框架，覆盖接口自动化、UI 自动化、E2E 和性能测试。适用于测试工程师对自动化测试框架进行实践、求职面试展示或学习参考。
 
@@ -31,7 +31,7 @@
 | Playwright | Web UI 自动化、截图、视频和 Trace |
 | MySQL / PyMySQL | 数据库断言和测试数据复核 |
 | Allure | API、UI、E2E 可视化报告 |
-| Locust | 只读性能基线与 HTML/CSV 输出 |
+| Locust | 性能测试与 HTML/CSV 输出 |
 | GitHub Actions | 质量检查与手动性能流水线 |
 
 ## 📁 项目结构
@@ -42,10 +42,10 @@ ClmERP/
 ├── api/                      # API 自动化用例、YAML、Schema 和统一执行器
 ├── ui/                       # Playwright UI 用例、fixture、页面对象
 ├── e2e/                      # API + UI + 数据库跨层冒烟
-├── performance/              # Locust 只读性能测试
+├── performance/              # Locust 性能测试
 ├── shared/                   # API/UI/E2E 复用的客户端和数据库辅助方法
 ├── config/                   # 统一配置读取与配置模板
-├── reports/                  # 统一运行产物（Git 忽略）
+├── reports/                  # 测试报告与运行产物
 ├── run.py                    # 统一执行入口
 ├── pytest.ini                # pytest 配置与 marker
 └── requirements.txt          # 依赖清单
@@ -63,7 +63,7 @@ ClmERP/
     │                      │                      │
     ▼                      ▼                      ▼
 ┌──────────────┐    ┌────────────────┐    ┌────────────────┐
-│ API 自动化    │    │ UI 自动化       │    │ 只读性能基线    │
+│ API 自动化    │    │ UI 自动化       │    │ 性能测试        │
 │ pytest       │    │ Playwright     │    │ Locust         │
 │ requests     │    │ Page Object    │    │ readonly tasks │
 └──────┬───────┘    └───────┬────────┘    └───────┬────────┘
@@ -110,13 +110,13 @@ ClmERP/
 | `e2e/test_purchase_sales_e2e.py` | 采购订单到已审核采购入库 | UI 操作 + API 查询 + MySQL 库存/金额断言 |
 | `e2e/test_purchase_sales_e2e.py` | 销售订单到已审核销售出库 | UI 操作 + API 查询 + MySQL 库存/金额断言 |
 
-### 只读性能基线
+### 性能测试
 
 | 用户模型 | 请求范围 | 输出 |
 | --- | --- | --- |
 | `ErpReadOnlyUser` | 登录、商品列表、库存列表、单据列表 | Locust HTML、CSV 和日志 |
 
-性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
+性能测试当前提供 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
 
 ## ✨ 设计亮点
 
@@ -126,7 +126,7 @@ ClmERP/
 | 统一 API 执行器 | 支持单接口用例和多步骤业务场景，失败信息定位到 YAML、用例、请求、断言和变量来源 |
 | Playwright 页面自动化 | 使用官方 `pytest-playwright`，按 Page Object 组织登录、采购转入库、销售转出库等 ERP 页面冒烟用例 |
 | 跨层闭环校验 | E2E 用例串联 UI 操作、API 查询和数据库校验，覆盖采购入库与销售出库链路 |
-| 只读性能基线 | Locust 仅执行登录、商品列表、库存列表和单据列表等只读请求，不混入写入类压测 |
+| 性能测试 | Locust 当前执行登录、商品列表、库存列表和单据列表等只读请求，不混入写入类压测 |
 | 运行入口收敛 | 根目录 `run.py` 统一承接 API、UI、E2E、环境预检、性能和通知命令 |
 | 报告产物隔离 | API/UI/E2E 使用分目录 Allure 原始结果，UI/E2E 输出截图、视频和 Trace，性能输出 HTML、CSV 和日志 |
 
@@ -281,7 +281,7 @@ python run.py ui --browser chromium --headed
 python run.py e2e --suite smoke
 python run.py e2e --suite all
 
-# 只读性能基线
+# 性能测试
 python run.py performance --scenario readonly --users 1 --spawn-rate 1 --run-time 1m
 
 # 显式发送通知
@@ -290,7 +290,7 @@ python run.py notify --report reports/api_results.xml --channel dingtalk
 python run.py notify --report reports/api_results.xml --channel all
 ```
 
-`performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口只允许 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
+`performance` 必须显式执行，不会混入 API/UI/E2E 普通回归。当前性能入口提供 `readonly` 场景，最大用户数 `10`，最长运行时间 `5m`。
 
 `notify` 也必须显式执行，API/UI/E2E 默认执行完成后不会自动发送通知。通知依赖本地 `config/local.ini` 或环境变量中的钉钉、邮箱配置。
 
